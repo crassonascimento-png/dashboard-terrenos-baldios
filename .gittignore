@@ -1,6 +1,5 @@
 venv/
+dados.db
+static/uploads/
 __pycache__/
 *.pyc
-dados.db
-*.sqlite
-static/uploads/*
