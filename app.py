@@ -142,6 +142,9 @@ def index():
 
 @app.route("/registro", methods=["GET", "POST"])
 def registro():
+    # Garante que as tabelas (incluindo users) existem
+    db.create_all()
+    
     if request.method == "POST":
         nome = request.form["nome"]
         email = request.form["email"]
@@ -531,19 +534,24 @@ def atualizar_situacao(terreno_id):
     flash("Situação atualizada com sucesso.", "success")
     return redirect(url_for("terreno_detalhe", terreno_id=terreno.id))
 
-
-# Criação das tabelas e execução do app
+# ==== Inicialização das tabelas no banco (Render e local) ====
 
 @app.before_first_request
 def create_tables():
+    """Garante que todas as tabelas existem antes de atender requisições."""
     db.create_all()
+
 
 @app.route("/initdb")
 def initdb():
+    """Rota manual para criar as tabelas no banco, se necessário."""
     db.create_all()
     return "Banco inicializado com sucesso."
 
 
 if __name__ == "__main__":
+    # Execução local
     app.run(host="0.0.0.0", port=5000, debug=True)
+
+
 
