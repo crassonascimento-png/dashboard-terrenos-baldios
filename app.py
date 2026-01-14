@@ -538,6 +538,12 @@ def atualizar_situacao(terreno_id):
 def create_tables():
     db.create_all()
 
+@app.route("/initdb")
+def initdb():
+    db.create_all()
+    return "Banco inicializado com sucesso."
+
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
 
