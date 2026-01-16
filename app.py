@@ -1,6 +1,13 @@
-from flask import Flask, render_template, redirect, url_for, request, flash
+from flask import (
+    Flask,
+    render_template,
+    redirect,
+    url_for,
+    request,
+    flash,
+    send_file,
+)
 from flask_sqlalchemy import SQLAlchemy
-from werkzeug.utils import secure_filename
 from flask_login import (
     LoginManager,
     login_user,
@@ -10,14 +17,16 @@ from flask_login import (
     UserMixin,
 )
 from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.utils import secure_filename
 
 from datetime import datetime
 from sqlalchemy import func
 
 import csv
 import io
-
 import os
+import uuid
+
 
 
 
@@ -348,9 +357,6 @@ def exportar():
 
     return response
 
-from werkzeug.utils import secure_filename
-import uuid
-import os
 
 @app.route("/terrenos/novo", methods=["GET", "POST"])
 @login_required
@@ -420,14 +426,21 @@ def novo_terreno():
 @app.route("/terrenos/<int:terreno_id>")
 @login_required
 def terreno_detalhe(terreno_id):
-    # Garante que qualquer tabela nova (como TerrenoFoto) exista
+    # Garante que todas as tabelas existem (incluindo TerrenoFoto)
     db.create_all()
+
+    terreno = TerrenoBaldio.query.get_or_404(terreno_id)
+    fotos = TerrenoFoto.query.filter_by(terreno_id=terreno.id).all()
 
     # Regra de permissão:
     # - Admin pode ver qualquer terreno
     # - ACE só pode ver os terrenos que ele mesmo cadastrou
-  
-flash("Você não tem permissão para visualizar este terreno.", "danger")
+    if (not getattr(current_user, "is_admin", False)) and terreno.criado_por_id != current_user.id:
+        flash("Você não tem permissão para visualizar este terreno.", "danger")
+        return redirect(url_for("dashboard"))
+
+    # Se passou pela regra de permissão, exibe normalmente
+    return render_template("terreno_detalhe.html", terreno=terreno, fotos=fotos)
 
 
 
