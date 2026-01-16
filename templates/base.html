@@ -10,29 +10,18 @@
     />
   </head>
   <body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
-      <div class="container-fluid">
-        <a class="navbar-brand" href="{{ url_for('dashboard') }}">
-          TB - Vigilância
-        </a>
-        <div class="collapse navbar-collapse">
-          <ul class="navbar-nav ms-auto">
-            {% if current_user.is_authenticated %}
-              <li class="nav-item">
-                <span class="nav-link">Logado como: {{ current_user.nome }}</span>
-              </li>
-              <li class="nav-item">
-                <a class="nav-link" href="{{ url_for('logout') }}">Sair</a>
-              </li>
-            {% else %}
-              <li class="nav-item">
-                <a class="nav-link" href="{{ url_for('login') }}">Login</a>
-              </li>
-            {% endif %}
-          </ul>
-        </div>
+    <nav class="navbar navbar-dark bg-dark">
+  <div class="container-fluid d-flex flex-column flex-sm-row align-items-start align-items-sm-center">
+    <a class="navbar-brand" href="{{ url_for('dashboard') }}">TB - Vigilância</a>
+
+    {% if current_user.is_authenticated %}
+      <div class="ms-sm-auto text-white small text-end mt-2 mt-sm-0">
+        <div>Logado como: {{ current_user.nome }}</div>
+        <a href="{{ url_for('logout') }}" class="text-white text-decoration-none">Sair</a>
       </div>
-    </nav>
+    {% endif %}
+  </div>
+</nav>
 
     <div class="container mb-4">
       {% with messages = get_flashed_messages(with_categories=true) %}
