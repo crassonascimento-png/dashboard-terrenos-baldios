@@ -9,14 +9,13 @@ from flask_login import (
     UserMixin,
 )
 from werkzeug.security import generate_password_hash, check_password_hash
-from werkzeug.utils import secure_filename
+
 from datetime import datetime
 from sqlalchemy import func
 
 import csv
 import io
 
-import os
 
 
 
@@ -347,6 +346,9 @@ def exportar():
 
     return response
 
+from werkzeug.utils import secure_filename
+import uuid
+import os
 
 @app.route("/terrenos/novo", methods=["GET", "POST"])
 @login_required
