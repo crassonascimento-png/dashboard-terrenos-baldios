@@ -426,11 +426,10 @@ def terreno_detalhe(terreno_id):
     # Regra de permissão:
     # - Admin pode ver qualquer terreno
     # - ACE só pode ver os terrenos que ele mesmo cadastrou
-    if not current_user.is_admin and terreno.criado_por_id != current_user.id:
-        flash("Você não tem permissão para visualizar este terreno.", "danger")
-        return redirect(url_for("dashboard"))
+  
+flash("Você não tem permissão para visualizar este terreno.", "danger")
 
-   
+
 
 @app.route("/terrenos/<int:terreno_id>/editar", methods=["GET", "POST"])
 @login_required
