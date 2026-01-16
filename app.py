@@ -1,5 +1,6 @@
 from flask import Flask, render_template, redirect, url_for, request, flash
 from flask_sqlalchemy import SQLAlchemy
+from werkzeug.utils import secure_filename
 from flask_login import (
     LoginManager,
     login_user,
@@ -16,6 +17,7 @@ from sqlalchemy import func
 import csv
 import io
 
+import os
 
 
 
@@ -384,7 +386,7 @@ def novo_terreno():
         db.session.add(terreno)
         db.session.commit()
 
-        # Tratamento das fotos (máx. 5)
+        # Tratamento das fotos (max = 5)
         arquivos = request.files.getlist("fotos")
         max_fotos = 5
         contador = 0
