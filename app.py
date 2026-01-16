@@ -417,11 +417,11 @@ def novo_terreno():
     situacoes_lista = ["Pendente", "Em limpeza", "Limpo", "Reincidente"]
     return render_template("novo_terreno.html", situacoes_lista=situacoes_lista)
 
-
 @app.route("/terrenos/<int:terreno_id>")
 @login_required
 def terreno_detalhe(terreno_id):
-    terreno = TerrenoBaldio.query.get_or_404(terreno_id)
+    # Garante que qualquer tabela nova (como TerrenoFoto) exista
+    db.create_all()
 
     # Regra de permissão:
     # - Admin pode ver qualquer terreno
@@ -430,7 +430,7 @@ def terreno_detalhe(terreno_id):
         flash("Você não tem permissão para visualizar este terreno.", "danger")
         return redirect(url_for("dashboard"))
 
-    return render_template("terreno_detalhe.html", terreno=terreno)
+   
 
 @app.route("/terrenos/<int:terreno_id>/editar", methods=["GET", "POST"])
 @login_required
