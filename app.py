@@ -6,6 +6,7 @@ from flask import (
     request,
     flash,
     send_file,
+    send_from_directory,  # <- acrescenta se ainda não tiver
 )
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import (
@@ -44,6 +45,7 @@ UPLOAD_FOLDER = os.path.join(basedir, "static", "uploads")
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
+app.config["UPLOAD_FOLDER"] = os.path.join("static", "uploads")
 app.config["MAX_CONTENT_LENGTH"] = 10 * 1024 * 1024  # limite: 10 MB por requisição
 
 ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif"}

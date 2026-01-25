@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="container mt-4">
+<div class="container mt-4" style="max-width: 900px;">
   <h2>Detalhes do Terreno #{{ terreno.id }}</h2>
 
   <div class="row">
@@ -82,7 +82,7 @@
       {% for foto in fotos %}
         <div class="col-6 col-md-3 mb-3">
           <img
-            src="{{ url_for('static', filename='uploads/' ~ foto.caminho_arquivo) }}"
+            src="{{ url_for('uploaded_file', filename=foto.caminho_arquivo) }}"
             class="img-fluid img-thumbnail"
             alt="Foto do terreno {{ terreno.id }}"
           >
