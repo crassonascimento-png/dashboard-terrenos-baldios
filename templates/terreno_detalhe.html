@@ -1,175 +1,115 @@
 {% extends "base.html" %}
+
 {% block content %}
-<h3>Detalhes do Terreno Baldio #{{ terreno.id }}</h3>
+<div class="container mt-4">
+  <h2>Detalhes do Terreno #{{ terreno.id }}</h2>
 
-{% if current_user.is_admin or current_user.id == terreno.criado_por_id %}
-  <div class="mb-3">
-    <a
-      href="{{ url_for('terreno_editar', terreno_id=terreno.id) }}"
-      class="btn btn-sm btn-outline-warning"
-    >
-      Editar dados do terreno
-    </a>
-  </div>
-{% endif %}
+  <div class="row">
+    <!-- Dados do terreno -->
+    <div class="col-md-6 mb-3">
+      <table class="table table-sm table-bordered">
+        <tbody>
+          <tr>
+            <th>Bairro</th>
+            <td>{{ terreno.bairro }}</td>
+          </tr>
+          <tr>
+            <th>Microárea</th>
+            <td>{{ terreno.microarea or "-" }}</td>
+          </tr>
+          <tr>
+            <th>Endereço</th>
+            <td>{{ terreno.endereco }}</td>
+          </tr>
+          <tr>
+            <th>Referência</th>
+            <td>{{ terreno.referencia }}</td>
+          </tr>
+          <tr>
+            <th>Lixo</th>
+            <td>{{ "Sim" if terreno.tem_lixo else "Não" }}</td>
+          </tr>
+          <tr>
+            <th>Água parada</th>
+            <td>{{ "Sim" if terreno.tem_agua_parada else "Não" }}</td>
+          </tr>
+          <tr>
+            <th>Risco</th>
+            <td>{{ terreno.risco }}</td>
+          </tr>
+          <tr>
+            <th>Situação</th>
+            <td>{{ terreno.situacao }}</td>
+          </tr>
+          <tr>
+            <th>Criado por</th>
+            <td>{{ terreno.criado_por.nome if terreno.criado_por else "-" }}</td>
+          </tr>
+          <tr>
+            <th>Latitude</th>
+            <td>{{ terreno.latitude or "-" }}</td>
+          </tr>
+          <tr>
+            <th>Longitude</th>
+            <td>{{ terreno.longitude or "-" }}</td>
+          </tr>
+          <tr>
+            <th>Observações</th>
+            <td>{{ terreno.observacoes or "-" }}</td>
+          </tr>
+        </tbody>
+      </table>
 
-{% if terreno.latitude and terreno.longitude %}
-  <!-- Leaflet CSS/JS -->
-  <link
-    rel="stylesheet"
-    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
-    crossorigin=""
-  />
-  <script
-    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
-    crossorigin=""
-  ></script>
-
-  <div id="map" class="mb-3" style="height: 300px; border-radius: 8px; overflow: hidden;"></div>
-
-  <script>
-    const lat = parseFloat("{{ terreno.latitude }}");
-    const lng = parseFloat("{{ terreno.longitude }}");
-
-    if (!isNaN(lat) && !isNaN(lng)) {
-      const map = L.map("map").setView([lat, lng], 18);
-
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        maxZoom: 19
-      }).addTo(map);
-
-      L.marker([lat, lng])
-        .addTo(map)
-        .bindPopup("Terreno baldio #{{ terreno.id }}")
-        .openPopup();
-    }
-  </script>
-
-  <p>
-    <a
-      href="https://www.google.com/maps/search/?api=1&query={{ terreno.latitude }},{{ terreno.longitude }}"
-      target="_blank"
-      rel="noopener"
-    >
-      Abrir no Google Maps
-    </a>
-  </p>
-{% endif %}
-
-<div class="card mb-3">
-  <div class="card-body">
-        <h5 class="card-title">{{ terreno.bairro }} – {{ terreno.endereco }}</h5>
-        <p class="card-text">
-      <strong>Microárea:</strong>
-      {{ terreno.microarea or "Não informado" }}
-     </p>
-        <p class="card-text">
-      <strong>Ponto de referência:</strong>
-      {{ terreno.referencia or "Não informado" }}
-    </p>
-    <p class="card-text mb-1">
-      <strong>Acúmulo de lixo:</strong>
-      {{ "Sim" if terreno.tem_lixo else "Não" }}
-    </p>
-    <p class="card-text mb-1">
-      <strong>Água parada / criadouro:</strong>
-      {{ "Sim" if terreno.tem_agua_parada else "Não" }}
-    </p>
-    <p class="card-text mb-1">
-      <strong>Classificação de risco:</strong>
-      {{ terreno.risco }}
-    </p>
-    <p class="card-text mb-1">
-  <strong>Situação atual:</strong>
-  {{ terreno.situacao }}
-</p>
-
-{% if current_user.is_admin or current_user.id == terreno.criado_por_id %}
-  <form
-    method="post"
-    action="{{ url_for('atualizar_situacao', terreno_id=terreno.id) }}"
-    class="row g-2 align-items-center mb-2"
-  >
-    <div class="col-auto">
-      <label for="situacao" class="form-label mb-0"><small>Atualizar situação:</small></label>
-      <select name="situacao" id="situacao" class="form-select form-select-sm">
-        {% set situacoes_validas = ["Pendente", "Em limpeza", "Limpo", "Reincidente"] %}
-        {% for s in situacoes_validas %}
-        <option value="{{ s }}" {% if terreno.situacao == s %}selected{% endif %}>
-          {{ s }}
-        </option>
-        {% endfor %}
-      </select>
+      <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">Voltar</a>
+      <a href="{{ url_for('terreno_editar', terreno_id=terreno.id) }}" class="btn btn-warning">Editar</a>
     </div>
-    <div class="col-auto" style="margin-top: 1.4rem;">
-      <button type="submit" class="btn btn-sm btn-primary">
-        Atualizar
-      </button>
-    </div>
-  </form>
-{% endif %}
 
-    <p class="card-text">
-      <strong>Cadastrado por:</strong>
-      {{ terreno.criado_por.nome if terreno.criado_por else "-" }}
-    </p>
-    <p class="card-text">
-      <strong>Observações:</strong><br />
-      {{ terreno.observacoes or "Sem observações." }}
-    </p>
+    <!-- Mapa -->
+    <div class="col-md-6 mb-3">
+      {% if terreno.latitude and terreno.longitude %}
+        <div id="map-terreno" style="width: 100%; height: 320px;"></div>
+      {% else %}
+        <p class="text-muted">Este terreno ainda não possui coordenadas cadastradas.</p>
+      {% endif %}
+    </div>
   </div>
+
+  <hr>
+
+  <h4>Fotos do terreno</h4>
+  {% if fotos %}
+    <div class="row">
+      {% for foto in fotos %}
+        <div class="col-6 col-md-3 mb-3">
+          <img
+            src="{{ url_for('static', filename='uploads/' ~ foto.caminho_arquivo) }}"
+            class="img-fluid img-thumbnail"
+            alt="Foto do terreno {{ terreno.id }}"
+          >
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <p class="text-muted">Ainda não há fotos cadastradas para este terreno.</p>
+  {% endif %}
 </div>
 
-<h4>Fotos do terreno</h4>
+{% if terreno.latitude and terreno.longitude %}
+<script>
+  // Inicializa mapa apenas se tiver coordenadas
+  document.addEventListener("DOMContentLoaded", function () {
+    var map = L.map("map-terreno").setView(
+      [{{ terreno.latitude }}, {{ terreno.longitude }}],
+      18
+    );
 
-{% if terreno.fotos %}
-  <div class="row">
-    {% for foto in terreno.fotos %}
-    <div class="col-md-3 col-sm-4 col-6 mb-3">
-      <div class="card">
-        <img
-          src="{{ url_for('static', filename='uploads/' ~ foto.arquivo) }}"
-          class="card-img-top"
-          alt="Foto do terreno"
-          style="max-height: 200px; object-fit: cover;"
-        />
-      </div>
-    </div>
-    {% endfor %}
-  </div>
-{% else %}
-  <div class="alert alert-info">
-    Nenhuma foto cadastrada para este terreno.
-  </div>
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 19,
+      attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+
+    L.marker([{{ terreno.latitude }}, {{ terreno.longitude }}]).addTo(map);
+  });
+</script>
 {% endif %}
-
-<h4 class="mt-4">Histórico de situação</h4>
-
-{% if terreno.historico %}
-  <table class="table table-sm table-striped">
-    <thead>
-      <tr>
-        <th>Data / hora</th>
-        <th>Alterado por</th>
-        <th>De</th>
-        <th>Para</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for h in terreno.historico %}
-      <tr>
-        <td>{{ h.data_hora.strftime("%d/%m/%Y %H:%M") if h.data_hora else "-" }}</td>
-        <td>{{ h.usuario.nome if h.usuario else "-" }}</td>
-        <td>{{ h.situacao_anterior or "-" }}</td>
-        <td>{{ h.situacao_nova or "-" }}</td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-{% else %}
-  <div class="alert alert-info">
-    Nenhuma alteração de situação registrada ainda.
-  </div>
-{% endif %}
+{% endblock %}
