@@ -6,7 +6,7 @@ from flask import (
     request,
     flash,
     send_file,
-    send_from_directory,  # <- acrescenta se ainda não tiver
+    send_from_directory,
 )
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import (
@@ -44,8 +44,9 @@ app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 UPLOAD_FOLDER = os.path.join(basedir, "static", "uploads")
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 app.config["UPLOAD_FOLDER"] = os.path.join("static", "uploads")
+app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
+
 app.config["MAX_CONTENT_LENGTH"] = 10 * 1024 * 1024  # limite: 10 MB por requisição
 
 ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif"}
@@ -154,12 +155,18 @@ def index():
 
 # ==== Inicialização das tabelas no banco (Render e local) ====
 
+@app.route("/uploads/<path:filename>")
+def uploaded_file(filename):
+    """Serve os arquivos de imagem enviados (fotos dos terrenos)."""
+    return send_from_directory(app.config["UPLOAD_FOLDER"], filename)
+
 
 @app.route("/initdb")
 def initdb():
     """Rota manual para criar as tabelas no banco, se necessário."""
     db.create_all()
     return "Banco inicializado com sucesso."
+
 
 
 @app.route("/registro", methods=["GET", "POST"])
