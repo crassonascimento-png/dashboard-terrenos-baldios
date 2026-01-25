@@ -426,21 +426,13 @@ def novo_terreno():
 @app.route("/terrenos/<int:terreno_id>")
 @login_required
 def terreno_detalhe(terreno_id):
-    # Garante que todas as tabelas existem (incluindo TerrenoFoto)
+    # Garante que qualquer tabela nova (como TerrenoFoto) exista
     db.create_all()
 
     terreno = TerrenoBaldio.query.get_or_404(terreno_id)
     fotos = TerrenoFoto.query.filter_by(terreno_id=terreno.id).all()
-
-    # Regra de permissão:
-    # - Admin pode ver qualquer terreno
-    # - ACE só pode ver os terrenos que ele mesmo cadastrou
-    if (not getattr(current_user, "is_admin", False)) and terreno.criado_por_id != current_user.id:
-        flash("Você não tem permissão para visualizar este terreno.", "danger")
-        return redirect(url_for("dashboard"))
-
-    # Se passou pela regra de permissão, exibe normalmente
     return render_template("terreno_detalhe.html", terreno=terreno, fotos=fotos)
+
 
 
 
