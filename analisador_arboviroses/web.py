@@ -40,6 +40,8 @@ ARQUIVOS = [
     ("alertas.json", "Alertas"), ("alertas.csv", "Alertas (planilha)"),
     ("bairros.json", "Indicadores por bairro"), ("bairros.csv", "Indicadores por bairro (planilha)"),
     ("microareas.csv", "Casos por microárea (planilha)"),
+    ("ruas.csv", "Ruas com casos (planilha)"),
+    ("enderecos_repetidos.csv", "Endereços com 2 ou mais casos (planilha)"),
     ("semanas.csv", "Casos por semana epidemiológica"),
     ("mapa_casos.geojson", "Mapa de casos (GeoJSON)"),
     ("mapa_bairros.geojson", "Mapa de bairros (GeoJSON)"),
@@ -154,15 +156,16 @@ def resultado(token):
     pasta = _pasta(token)
     with open(os.path.join(pasta, "vigiavetor.json"), encoding="utf-8") as f:
         dados = json.load(f)
-    return render_template("resultado.html", token=token, d=dados, arquivos=ARQUIVOS,
-                           validade_min=VALIDADE_S // 60)
+    arquivos = [(n, d) for n, d in ARQUIVOS if os.path.exists(os.path.join(pasta, n))]
+    modelo = "resultado_enderecos.html" if dados["resumo"].get("tipo") == "enderecos_secretaria" else "resultado.html"
+    return render_template(modelo, token=token, d=dados, arquivos=arquivos, validade_min=VALIDADE_S // 60)
 
 
 @app.route("/resultado/<token>/<nome>")
 @login_obrigatorio
 def baixar(token, nome):
     pasta = _pasta(token)
-    if nome not in {n for n, _ in ARQUIVOS}:
+    if nome not in {n for n, _ in ARQUIVOS} or not os.path.exists(os.path.join(pasta, nome)):
         abort(404)
     return send_file(os.path.join(pasta, nome), as_attachment=True, download_name=nome)
 
@@ -174,7 +177,8 @@ def baixar_zip(token):
     memoria = io.BytesIO()
     with zipfile.ZipFile(memoria, "w", zipfile.ZIP_DEFLATED) as z:
         for nome, _ in ARQUIVOS:
-            z.write(os.path.join(pasta, nome), nome)
+            if os.path.exists(os.path.join(pasta, nome)):
+                z.write(os.path.join(pasta, nome), nome)
     memoria.seek(0)
     return send_file(memoria, as_attachment=True, download_name="vigiavetor_arboviroses.zip",
                      mimetype="application/zip")

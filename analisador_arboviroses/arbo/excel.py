@@ -70,6 +70,7 @@ def gravar_excel(caminho, resultado, casos_confirmados, campos_casos):
     loc = r["localizacao"]
     linhas += [
         ("Localizados pelo endereço", loc["endereco"] + loc["arquivo"]),
+        ("Localizados pela rua (número não encontrado)", loc["rua"]),
         ("Localizados pelo centro do bairro", loc["bairro"]),
         ("Sem localização", loc["sem_localizacao"]),
         ("Bairros sem cadastro", r.get("bairros_nao_cadastrados", {})),

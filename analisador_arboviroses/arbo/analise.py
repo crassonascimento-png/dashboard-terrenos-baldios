@@ -92,9 +92,18 @@ def geocodificar(casos, geocodificador, maximo=None):
             if cabe() or _chave(geocodificador, c["vv_bairro"], c["vv_endereco"]) in geocodificador.cache:
                 ponto = geocodificador.localizar(c["vv_endereco"], c["vv_bairro"], ref)
                 novas += geocodificador.consultas - antes
+        precisao = "endereco"
+        rua = c["vv_endereco"].split(",")[0].strip() if c["vv_endereco"] else ""
+        if not ponto and geocodificador and rua and rua != c["vv_endereco"]:
+            # Número não encontrado: tenta só a rua
+            antes = geocodificador.consultas
+            if cabe() or _chave(geocodificador, c["vv_bairro"], rua) in geocodificador.cache:
+                ponto = geocodificador.localizar(rua, c["vv_bairro"], ref)
+                novas += geocodificador.consultas - antes
+                precisao = "rua"
         if ponto:
             c["vv_latitude"], c["vv_longitude"] = round(ponto[0], 6), round(ponto[1], 6)
-            c["vv_precisao_localizacao"] = "endereco"
+            c["vv_precisao_localizacao"] = precisao
         elif ref:
             c["vv_latitude"], c["vv_longitude"] = ref
             c["vv_precisao_localizacao"] = "bairro"
@@ -255,7 +264,7 @@ def analisar(casos, cadastro, config, data_ref=None):
         "total_alertas": len(alertas),
         "alertas_por_nivel": {n: sum(1 for a in alertas if a["nivel"] == n) for n in ("critico", "alerta", "atencao")},
         "localizacao": {p: sum(1 for c in confirmados if c["vv_precisao_localizacao"] == p)
-                        for p in ("arquivo", "endereco", "bairro", "sem_localizacao")},
+                        for p in ("arquivo", "endereco", "rua", "bairro", "sem_localizacao")},
     }
     for agravo in AGRAVOS:
         lista = [c for c in confirmados if c["vv_agravo"] == agravo]

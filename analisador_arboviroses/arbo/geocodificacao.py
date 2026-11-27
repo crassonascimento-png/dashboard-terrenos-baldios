@@ -23,8 +23,8 @@ class Geocodificador:
         self.raio_municipio_m = float(config.get("raio_municipio_km", 25)) * 1000
         self.caminho_cache = caminho_cache
         self.sessao = sessao or requests.Session()
-        self.sessao.headers.setdefault(
-            "User-Agent", config.get("geocodificacao_user_agent", "analisador-arboviroses/1.0"))
+        # O Nominatim recusa o User-Agent padrão do requests ("python-requests/x")
+        self.sessao.headers["User-Agent"] = config.get("geocodificacao_user_agent", "analisador-arboviroses/1.0")
         self._ultima = 0.0
         self.consultas = 0
         self.erros = 0

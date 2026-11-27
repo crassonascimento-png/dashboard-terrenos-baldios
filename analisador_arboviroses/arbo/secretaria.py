@@ -277,7 +277,7 @@ def analisar(casos, cadastro, config, info):
         "enderecos_com_2_ou_mais_casos": len(repetidos),
         "total_alertas": len(alertas),
         "alertas_por_nivel": {n: sum(1 for a in alertas if a["nivel"] == n) for n in ORDEM},
-        "localizacao": {p: loc.get(p, 0) for p in ("endereco", "bairro", "sem_localizacao")},
+        "localizacao": {p: loc.get(p, 0) for p in ("endereco", "rua", "bairro", "sem_localizacao")},
         "abas": info["abas"],
         "avisos": info["avisos"],
     }
@@ -380,7 +380,8 @@ def gravar_excel(caminho, r, casos):
         ("Endereços com 2 ou mais casos", res["enderecos_com_2_ou_mais_casos"]),
         ("Alertas críticos", res["alertas_por_nivel"]["critico"]), ("Alertas", res["alertas_por_nivel"]["alerta"]),
         ("Atenção", res["alertas_por_nivel"]["atencao"]),
-        ("Localizados pelo endereço", res["localizacao"]["endereco"]),
+        ("Localizados pelo endereço (rua e número)", res["localizacao"]["endereco"]),
+        ("Localizados pela rua (número não encontrado)", res["localizacao"]["rua"]),
         ("Localizados pelo centro do bairro", res["localizacao"]["bairro"]),
         ("Sem localização no mapa", res["localizacao"]["sem_localizacao"]),
     ]

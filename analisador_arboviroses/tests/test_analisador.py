@@ -240,3 +240,17 @@ def test_web(monkeypatch):
     outro = web.app.test_client()
     outro.post("/login", data={"senha": "teste123"})
     assert outro.get(resp.headers["Location"]).status_code == 403
+
+
+def test_web_planilha_secretaria(monkeypatch):
+    monkeypatch.setenv("ANALISADOR_SENHA", "teste123")
+    import web
+
+    cli = web.app.test_client()
+    cli.post("/login", data={"senha": "teste123"})
+    resp = cli.post("/", data={"arquivo": (io.BytesIO(_planilha_secretaria()), "enderecos.xlsx")},
+                    content_type="multipart/form-data")
+    pagina = cli.get(resp.headers["Location"]).get_data(as_text=True)
+    assert "Ruas com mais casos" in pagina and "JOSIAS" in pagina
+    assert cli.get(resp.headers["Location"] + "/ruas.csv").status_code == 200
+    assert cli.get(resp.headers["Location"] + "/microareas.csv").status_code == 404
