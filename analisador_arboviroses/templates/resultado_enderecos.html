@@ -47,7 +47,7 @@
 
 <div class="cartao">
   <h2>Qualidade dos dados</h2>
-  <p>Localização no mapa: {{ r.localizacao.endereco }} pelo endereço, {{ r.localizacao.rua }} pela rua, {{ r.localizacao.bairro }} pelo centro do bairro,
+  <p>Localização no mapa: {{ r.localizacao.endereco }} no número exato, {{ r.localizacao.rua }} na rua, {{ r.localizacao.bairro }} pelo centro do bairro,
      {{ r.localizacao.sem_localizacao }} sem localização.</p>
   {% if r.bairros_nao_cadastrados %}<p><b>Bairros sem cadastro:</b>
     {% for b, n in r.bairros_nao_cadastrados.items() %}{{ b }} ({{ n }}){% if not loop.last %}, {% endif %}{% endfor %}</p>{% endif %}

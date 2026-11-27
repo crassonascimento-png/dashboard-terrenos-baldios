@@ -103,7 +103,7 @@ def geocodificar(casos, geocodificador, maximo=None):
                 precisao = "rua"
         if ponto:
             c["vv_latitude"], c["vv_longitude"] = round(ponto[0], 6), round(ponto[1], 6)
-            c["vv_precisao_localizacao"] = precisao
+            c["vv_precisao_localizacao"] = "rua" if precisao == "rua" or (len(ponto) > 2 and ponto[2] == "rua") else "endereco"
         elif ref:
             c["vv_latitude"], c["vv_longitude"] = ref
             c["vv_precisao_localizacao"] = "bairro"

@@ -68,7 +68,10 @@ class Geocodificador:
         chave = normalizar_texto(consulta)
         if chave in self.cache:
             valor = self.cache[chave]
-            return tuple(valor) if valor else None
+            if not valor:
+                return None
+            # Entradas antigas ([lat, lon]) não guardavam a precisão: trata como rua
+            return (valor[0], valor[1], valor[2] if len(valor) > 2 else "rua")
         try:
             resultados = self._consultar(consulta)
         except (requests.RequestException, ValueError):
@@ -83,7 +86,9 @@ class Geocodificador:
                 continue
             if referencia and distancia_m(lat, lon, referencia[0], referencia[1]) > raio_m:
                 continue
-            ponto = (lat, lon)
+            exato = (r.get("type") == "house" or r.get("addresstype") in ("building", "house")
+                     or r.get("category") == "building")
+            ponto = (lat, lon, "endereco" if exato else "rua")
             break
         self.cache[chave] = list(ponto) if ponto else None
         if self.consultas % 50 == 0:
@@ -95,7 +100,8 @@ class Geocodificador:
         return ", ".join(p for p in partes if p)
 
     def localizar(self, endereco, bairro, referencia=None):
-        """Retorna (lat, lon) ou None.
+        """Retorna (lat, lon, precisao) ou None. ``precisao`` é "endereco" quando o
+        OpenStreetMap achou o imóvel e "rua" quando devolveu só o logradouro.
 
         ``referencia`` = (lat, lon) do centro do bairro; resultados longe demais
         dele são descartados (evita cair em rua homônima de outra cidade). Sem

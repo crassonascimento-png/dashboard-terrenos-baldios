@@ -42,7 +42,7 @@ PADRAO_ALERTAS = {
     "bairro_incidencia_100mil": {"atencao": 100, "alerta": 300, "critico": 500},
     "rua_casos": {"alerta": 5, "critico": 10},
     "endereco_casos": {"alerta": 3, "critico": 5},
-    "aglomerado": {"raio_metros": 200, "minimo_casos": 5},
+    "aglomerado": {"raio_metros": 200, "minimo_casos": 10},
     "cocirculacao_rua_minimo": 5,
 }
 
@@ -332,48 +332,51 @@ def _endereco_exibicao(c):
 
 
 def _aglomerados(casos, cfg):
-    pontos = [c for c in casos if c["vv_precisao_localizacao"] == "endereco"]
+    """Círculos de ``raio_metros`` com mais casos (o mais cheio primeiro; cada caso entra em um só).
+
+    Usa casos localizados pelo endereço ou pela rua. Diferente de agrupar em corrente,
+    garante que todos os casos de um aglomerado estão dentro do mesmo círculo.
+    """
+    pontos = [(float(c["vv_latitude"]), float(c["vv_longitude"]), c) for c in casos
+              if c["vv_precisao_localizacao"] in ("endereco", "rua", "arquivo")]
     raio, minimo = cfg["raio_metros"], cfg["minimo_casos"]
-    # Grade de células do tamanho do raio para não comparar todos com todos
     celula = raio / 111000
     grade = defaultdict(list)
-    for i, c in enumerate(pontos):
-        grade[(int(float(c["vv_latitude"]) // celula), int(float(c["vv_longitude"]) // celula))].append(i)
-    pai = list(range(len(pontos)))
+    for i, (lat, lon, _) in enumerate(pontos):
+        grade[(int(lat // celula), int(lon // celula))].append(i)
 
-    def raiz(i):
-        while pai[i] != i:
-            pai[i] = pai[pai[i]]
-            i = pai[i]
-        return i
+    def vizinhos(i):
+        lat, lon, _ = pontos[i]
+        gx, gy = int(lat // celula), int(lon // celula)
+        return [j for dx in (-1, 0, 1) for dy in (-1, 0, 1) for j in grade.get((gx + dx, gy + dy), [])
+                if distancia_m(lat, lon, pontos[j][0], pontos[j][1]) <= raio]
 
-    for (gx, gy), membros in grade.items():
-        vizinhos = [j for dx in (-1, 0, 1) for dy in (-1, 0, 1) for j in grade.get((gx + dx, gy + dy), [])]
-        for i in membros:
-            a = pontos[i]
-            for j in vizinhos:
-                if j <= i:
-                    continue
-                b = pontos[j]
-                if distancia_m(float(a["vv_latitude"]), float(a["vv_longitude"]),
-                               float(b["vv_latitude"]), float(b["vv_longitude"])) <= raio:
-                    pai[raiz(i)] = raiz(j)
-    grupos = defaultdict(list)
-    for i, c in enumerate(pontos):
-        grupos[raiz(i)].append(c)
+    viz = {i: set(vizinhos(i)) for i in range(len(pontos))}
+    livres = set(range(len(pontos)))
     saida = []
-    for g in grupos.values():
-        if len(g) < minimo:
-            continue
-        lat = sum(float(c["vv_latitude"]) for c in g) / len(g)
-        lon = sum(float(c["vv_longitude"]) for c in g) / len(g)
-        bairros = sorted({c["vv_bairro"] for c in g})
+    while True:
+        centro = max(livres, key=lambda i: (len(viz[i] & livres), -i), default=None)
+        if centro is None:
+            break
+        membros = viz[centro] & livres
+        if len(membros) < minimo:
+            break
+        livres -= membros
+        g = [pontos[j][2] for j in membros]
         cont = _contagem(g)
+        bairros = sorted({c["vv_bairro"] for c in g})
+        ruas = Counter(c["logradouro_original"] for c in g).most_common(3)
+        exatos = sum(1 for c in g if c["vv_precisao_localizacao"] != "rua")
         nivel = "critico" if len(g) >= 3 * minimo else "alerta"
-        saida.append({"nivel": nivel, "tipo": "aglomerado", "agravo": "todas", "bairro": ", ".join(bairros),
-                      "mensagem": f"Aglomerado de {len(g)} casos ({cont['dengue']} dengue, {cont['chikungunya']} "
-                                  f"chikungunya) a até {raio} m uns dos outros em {', '.join(bairros)}.",
-                      "valor": len(g), "limite": minimo, "latitude": round(lat, 6), "longitude": round(lon, 6)})
+        saida.append({
+            "nivel": nivel, "tipo": "aglomerado", "agravo": "todas", "bairro": ", ".join(bairros),
+            "mensagem": f"Aglomerado: {len(g)} casos ({cont['dengue']} dengue, {cont['chikungunya']} chikungunya) "
+                        f"num círculo de {raio} m em {', '.join(bairros)} — principais ruas: "
+                        f"{', '.join(f'{r} ({n})' for r, n in ruas)}.",
+            "valor": len(g), "limite": minimo,
+            "latitude": round(pontos[centro][0], 6), "longitude": round(pontos[centro][1], 6),
+            "raio_metros": raio, "casos_com_numero_exato": exatos,
+        })
     return saida
 
 
@@ -413,8 +416,8 @@ def gravar_excel(caminho, r, casos):
         ("Endereços com 2 ou mais casos", res["enderecos_com_2_ou_mais_casos"]),
         ("Alertas críticos", res["alertas_por_nivel"]["critico"]), ("Alertas", res["alertas_por_nivel"]["alerta"]),
         ("Atenção", res["alertas_por_nivel"]["atencao"]),
-        ("Localizados pelo endereço (rua e número)", res["localizacao"]["endereco"]),
-        ("Localizados pela rua (número não encontrado)", res["localizacao"]["rua"]),
+        ("Localizados no número exato", res["localizacao"]["endereco"]),
+        ("Localizados na rua (número não existe no mapa)", res["localizacao"]["rua"]),
         ("Localizados pelo centro do bairro", res["localizacao"]["bairro"]),
         ("Sem localização no mapa", res["localizacao"]["sem_localizacao"]),
     ]

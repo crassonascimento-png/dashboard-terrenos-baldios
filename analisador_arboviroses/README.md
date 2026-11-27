@@ -30,11 +30,11 @@ A planilha *"ENDEREÇOS DOS CASOS CONFIRMADOS ..."* (uma aba por doença: bairro
 | Aba do Excel | Conteúdo |
 |---|---|
 | Resumo | Período, totais por doença, qualidade da localização |
-| Alertas | Bairros com mais casos ou incidência alta, ruas com 5 ou mais casos, endereços com 3 ou mais casos, dengue e chikungunya na mesma rua (5 ou mais casos), aglomerados de 5 ou mais casos a até 200 m |
+| Alertas | Bairros com mais casos ou incidência alta, ruas com 5 ou mais casos, endereços com 3 ou mais casos, dengue e chikungunya na mesma rua (5 ou mais casos), aglomerados de 10 ou mais casos num círculo de 200 m |
 | Bairros | Ranking, casos por doença, % do município, incidência |
 | Ruas | Casos por rua (abreviações padronizadas: AV → AVENIDA, R → RUA...) |
 | Enderecos_Repetidos | Endereços com 2 ou mais casos (prédios, condomínios, casas com mais de um doente) |
-| Mapa_Casos | Latitude/longitude de cada caso (precisão: endereço, rua ou centro do bairro) |
+| Mapa_Casos | Latitude/longitude de cada caso. Precisão: `endereco` (número exato), `rua` (o OpenStreetMap não tem o número e devolve o ponto da rua; é o mais comum em Aracaju) ou `bairro` (centro do bairro) |
 | Casos | Todas as linhas, com a aba e a linha de origem |
 
 Os limites ficam em `config.json` → `alertas_enderecos`.
