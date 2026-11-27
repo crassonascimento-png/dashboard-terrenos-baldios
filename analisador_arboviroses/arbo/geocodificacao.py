@@ -1,0 +1,90 @@
+"""Geocodificação de endereços (Nominatim/OpenStreetMap) com cache local.
+
+Somente o endereço (logradouro, número, bairro, município e UF) é enviado ao
+serviço; nome e demais dados do paciente nunca saem do computador/servidor.
+O cache evita consultar o mesmo endereço duas vezes.
+"""
+
+import json
+import os
+import time
+
+import requests
+
+from .util import distancia_m, normalizar_texto
+
+
+class Geocodificador:
+    def __init__(self, config, caminho_cache=None, sessao=None):
+        self.config = config
+        self.url = config.get("geocodificacao_url", "https://nominatim.openstreetmap.org/search")
+        self.intervalo = float(config.get("geocodificacao_intervalo_segundos", 1.1))
+        self.raio_max_m = float(config.get("geocodificacao_raio_max_km", 5)) * 1000
+        self.caminho_cache = caminho_cache
+        self.sessao = sessao or requests.Session()
+        self.sessao.headers.setdefault(
+            "User-Agent", config.get("geocodificacao_user_agent", "analisador-arboviroses/1.0"))
+        self._ultima = 0.0
+        self.consultas = 0
+        self.erros = 0
+        self.cache = {}
+        if caminho_cache and os.path.exists(caminho_cache):
+            try:
+                with open(caminho_cache, encoding="utf-8") as f:
+                    self.cache = json.load(f)
+            except (OSError, json.JSONDecodeError):
+                self.cache = {}
+
+    def salvar_cache(self):
+        if not self.caminho_cache:
+            return
+        os.makedirs(os.path.dirname(os.path.abspath(self.caminho_cache)), exist_ok=True)
+        with open(self.caminho_cache, "w", encoding="utf-8") as f:
+            json.dump(self.cache, f, ensure_ascii=False, indent=0)
+
+    def _consultar(self, consulta):
+        espera = self.intervalo - (time.monotonic() - self._ultima)
+        if espera > 0:
+            time.sleep(espera)
+        self._ultima = time.monotonic()
+        self.consultas += 1
+        params = {"q": consulta, "format": "jsonv2", "limit": 3, "countrycodes": "br"}
+        resp = self.sessao.get(self.url, params=params, timeout=20)
+        resp.raise_for_status()
+        return resp.json()
+
+    def localizar(self, endereco, bairro, referencia=None):
+        """Retorna (lat, lon) ou None.
+
+        ``referencia`` = (lat, lon) do centro do bairro; resultados longe demais
+        dele são descartados (evita cair em rua homônima de outra cidade).
+        """
+        if not endereco:
+            return None
+        municipio = self.config.get("municipio", "")
+        uf = self.config.get("uf", "")
+        partes = [endereco, bairro, f"{municipio} - {uf}" if uf else municipio, "Brasil"]
+        consulta = ", ".join(p for p in partes if p)
+        chave = normalizar_texto(consulta)
+        if chave in self.cache:
+            valor = self.cache[chave]
+            return tuple(valor) if valor else None
+
+        try:
+            resultados = self._consultar(consulta)
+        except (requests.RequestException, ValueError):
+            self.erros += 1
+            return None  # não grava no cache: tenta de novo na próxima execução
+
+        ponto = None
+        for r in resultados or []:
+            try:
+                lat, lon = float(r["lat"]), float(r["lon"])
+            except (KeyError, TypeError, ValueError):
+                continue
+            if referencia and distancia_m(lat, lon, referencia[0], referencia[1]) > self.raio_max_m:
+                continue
+            ponto = (lat, lon)
+            break
+        self.cache[chave] = list(ponto) if ponto else None
+        return ponto

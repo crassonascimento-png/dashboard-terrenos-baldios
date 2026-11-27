@@ -1,0 +1,29 @@
+{
+  "_comentario": "Ajuste município, UF e código IBGE (6 dígitos) da sua cidade. Campos iniciados por _ são ignorados.",
+  "municipio": "Sua Cidade",
+  "uf": "UF",
+  "codigo_municipio_residencia": "",
+  "arquivo_bairros": "bairros.csv",
+
+  "incluir_em_investigacao": false,
+  "incluir_dados_pessoais_nas_saidas": true,
+  "classificacao_confirmada": {
+    "dengue": ["10", "11", "12"],
+    "chikungunya": ["13"],
+    "zika": ["1"]
+  },
+  "mapeamento_colunas": {},
+
+  "geocodificar": true,
+  "geocodificacao_raio_max_km": 5,
+  "geocodificacao_max_por_execucao": null,
+  "arquivo_cache_geocodificacao": "cache/geocodificacao.json",
+
+  "niveis_incidencia_acumulada": { "media": 100, "alta": 300 },
+  "alertas": {
+    "incidencia_4_semanas_100mil": { "atencao": 50, "alerta": 100, "critico": 300 },
+    "aumento_casos": { "minimo_casos": 5, "fator": 1.5 },
+    "aglomerado": { "raio_metros": 200, "janela_dias": 14, "minimo_casos": 3 },
+    "alertar_dengue_grave": true
+  }
+}

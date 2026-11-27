@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block conteudo %}
+<div class="cartao">
+  <h2>Analisar casos do SINAN</h2>
+  <form method="post" enctype="multipart/form-data" onsubmit="this.querySelector('button').textContent='Processando...'">
+    <label for="arquivo">Arquivo exportado do SINAN</label>
+    <input type="file" id="arquivo" name="arquivo" accept=".csv,.txt,.xlsx,.xls,.dbf" required>
+    <p class="dica">CSV, TXT, Excel ou DBF de dengue, chikungunya ou zika.</p>
+
+    <label for="agravo">Doença do arquivo</label>
+    <select id="agravo" name="agravo">
+      <option value="">Detectar pela coluna ID_AGRAVO</option>
+      <option value="dengue">Dengue</option>
+      <option value="chikungunya">Chikungunya</option>
+      <option value="zika">Zika</option>
+    </select>
+
+    <label for="bairros">Cadastro de bairros (opcional)</label>
+    <input type="file" id="bairros" name="bairros" accept=".csv,.xlsx">
+    <p class="dica">Colunas: bairro; microarea; populacao; latitude; longitude; apelidos.
+       Sem ele, uso o <code>{{ config.arquivo_bairros }}</code> do servidor.</p>
+
+    <label for="data_referencia">Data de referência (opcional)</label>
+    <input type="date" id="data_referencia" name="data_referencia">
+    <p class="dica">Padrão: data do início de sintomas mais recente do arquivo.</p>
+
+    <label><input type="checkbox" name="geocodificar" value="1" {% if config.geocodificar %}checked{% endif %}>
+      Localizar endereços no mapa (OpenStreetMap)</label>
+    <p class="dica">Envia só rua, número, bairro e cidade ao serviço de mapas. Endereços não encontrados
+       ficam no centro do bairro.</p>
+
+    <button type="submit">Analisar</button>
+  </form>
+</div>
+{% endblock %}
