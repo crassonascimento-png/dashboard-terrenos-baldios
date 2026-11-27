@@ -13,6 +13,8 @@ import pandas as pd
 
 from .util import (
     normalizar_coluna,
+    normalizar_logradouro,
+    normalizar_numero,
     normalizar_texto,
     parse_data,
     parse_float,
@@ -297,6 +299,11 @@ def preparar_casos(df: pd.DataFrame, config: dict, agravo_padrao=None):
             "vv_bairro": bairro,
             "vv_bairro_norm": normalizar_texto(bairro),
             "vv_endereco": montar_endereco(linha, colunas),
+            "vv_logradouro": str(col(linha, "logradouro") or "").strip(),
+            "vv_numero": _codigo(col(linha, "numero")),
+            "vv_complemento": str(col(linha, "complemento") or "").strip(),
+            "vv_logradouro_norm": normalizar_logradouro(col(linha, "logradouro")),
+            "vv_numero_norm": normalizar_numero(col(linha, "numero")),
             "vv_cep": _codigo(col(linha, "cep")),
             "vv_microarea": str(col(linha, "microarea") or "").strip(),
             "vv_latitude": lat if lat is not None else "",

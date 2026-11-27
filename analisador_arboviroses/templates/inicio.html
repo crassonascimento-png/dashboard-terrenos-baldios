@@ -20,6 +20,10 @@
     <p class="dica">Colunas: bairro; microarea; populacao; latitude; longitude; apelidos.
        Sem ele, uso o <code>{{ config.arquivo_bairros }}</code> do servidor.</p>
 
+    <label for="coordenadas">Coordenadas coletadas em campo (opcional)</label>
+    <input type="file" id="coordenadas" name="coordenadas" accept=".xlsx,.csv" multiple>
+    <p class="dica">As listas "coordenadas_a_coletar.xlsx" já preenchidas. Pode enviar várias.</p>
+
     <label for="data_referencia">Data de referência (opcional)</label>
     <input type="date" id="data_referencia" name="data_referencia">
     <p class="dica">Padrão: data do início de sintomas mais recente do arquivo.</p>

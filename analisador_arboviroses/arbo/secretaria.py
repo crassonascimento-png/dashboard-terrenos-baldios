@@ -19,24 +19,15 @@ from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Alignment, Font, PatternFill
 from openpyxl.utils import get_column_letter
 
-from . import modelo_vigiavetor
+from . import coordenadas_coletadas, modelo_vigiavetor
 from .analise import associar_bairros, geocodificar
-from .util import distancia_m, normalizar_texto
+from .util import distancia_m, normalizar_logradouro, normalizar_numero, normalizar_texto
 
 AGRAVOS = ("dengue", "chikungunya", "zika")
 NOME = {"dengue": "Dengue", "chikungunya": "Chikungunya", "zika": "Zika"}
 NIVEL = {"critico": "Crítico", "alerta": "Alerta", "atencao": "Atenção"}
 ORDEM = {"critico": 0, "alerta": 1, "atencao": 2}
 COR = {"critico": "F4CCCC", "alerta": "FCE5CD", "atencao": "FFF2CC"}
-
-ABREVIACOES = {
-    "AV": "AVENIDA", "AVE": "AVENIDA", "R": "RUA", "TV": "TRAVESSA", "TR": "TRAVESSA", "TRAV": "TRAVESSA",
-    "AL": "ALAMEDA", "PC": "PRACA", "PCA": "PRACA", "ROD": "RODOVIA", "EST": "ESTRADA", "CJ": "CONJUNTO",
-    "CONJ": "CONJUNTO", "LOT": "LOTEAMENTO", "CONC": "CONDOMINIO", "COND": "CONDOMINIO",
-    "DR": "DOUTOR", "DES": "DESEMBARGADOR", "GOV": "GOVERNADOR", "PROF": "PROFESSOR", "PE": "PADRE",
-    "STA": "SANTA", "STO": "SANTO", "SEN": "SENADOR", "DEP": "DEPUTADO", "GAL": "GENERAL", "GEN": "GENERAL",
-    "CEL": "CORONEL", "MAL": "MARECHAL", "VER": "VEREADOR", "PRES": "PRESIDENTE", "ENG": "ENGENHEIRO",
-}
 
 PADRAO_ALERTAS = {
     "bairro_casos": {"atencao": 25, "alerta": 50, "critico": 100},
@@ -81,18 +72,6 @@ def _agravo(texto):
     return None
 
 
-def normalizar_logradouro(texto):
-    palavras = normalizar_texto(texto).split()
-    return " ".join(ABREVIACOES.get(p, p) for p in palavras)
-
-
-def normalizar_numero(valor):
-    t = normalizar_texto(valor).replace(" ", "")
-    if t in ("", "SN", "SNO", "0", "00", "SEMNUMERO", "SNUMERO"):
-        return ""
-    return t
-
-
 def ler(conteudo: bytes):
     wb = load_workbook(io.BytesIO(conteudo), read_only=True, data_only=True)
     casos, abas, avisos, periodo = [], [], [], ""
@@ -125,6 +104,7 @@ def ler(conteudo: bytes):
                 "complemento": complemento,
                 "vv_bairro": bairro, "vv_bairro_norm": normalizar_texto(bairro), "vv_microarea": "",
                 "vv_logradouro_norm": log_norm, "vv_numero_norm": num_norm, "vv_endereco": endereco,
+                "vv_logradouro": logradouro, "vv_numero": numero, "vv_complemento": complemento,
                 "vv_latitude": "", "vv_longitude": "", "vv_precisao_localizacao": "",
             })
         abas.append({"aba": ws.title.strip(), "agravo": agravo, "casos": n_aba, "titulo": titulo})
@@ -311,7 +291,7 @@ def analisar(casos, cadastro, config, info):
         "enderecos_com_2_ou_mais_casos": len(repetidos),
         "total_alertas": len(alertas),
         "alertas_por_nivel": {n: sum(1 for a in alertas if a["nivel"] == n) for n in ORDEM},
-        "localizacao": {p: loc.get(p, 0) for p in ("endereco", "rua", "bairro", "sem_localizacao")},
+        "localizacao": {p: loc.get(p, 0) for p in ("coletada", "endereco", "rua", "bairro", "sem_localizacao")},
         "abas": info["abas"],
         "avisos": info["avisos"],
     }
@@ -339,7 +319,7 @@ def _aglomerados(casos, cfg):
     garante que todos os casos de um aglomerado estão dentro do mesmo círculo.
     """
     pontos = [(float(c["vv_latitude"]), float(c["vv_longitude"]), c) for c in casos
-              if c["vv_precisao_localizacao"] in ("endereco", "rua", "arquivo")]
+              if c["vv_precisao_localizacao"] in ("endereco", "rua", "arquivo", "coletada")]
     raio, minimo = cfg["raio_metros"], cfg["minimo_casos"]
     celula = raio / 111000
     grade = defaultdict(list)
@@ -417,6 +397,7 @@ def gravar_excel(caminho, r, casos):
         ("Endereços com 2 ou mais casos", res["enderecos_com_2_ou_mais_casos"]),
         ("Alertas críticos", res["alertas_por_nivel"]["critico"]), ("Alertas", res["alertas_por_nivel"]["alerta"]),
         ("Atenção", res["alertas_por_nivel"]["atencao"]),
+        ("Coordenadas coletadas em campo", res["localizacao"]["coletada"]),
         ("Localizados no número exato", res["localizacao"]["endereco"]),
         ("Localizados na rua (número não existe no mapa)", res["localizacao"]["rua"]),
         ("Localizados pelo centro do bairro", res["localizacao"]["bairro"]),
@@ -463,9 +444,10 @@ def gravar_excel(caminho, r, casos):
     wb.save(caminho)
 
 
-def executar(conteudo, pasta_saida, config, cadastro, geocodificador, gravar_json, gravar_csv):
+def executar(conteudo, pasta_saida, config, cadastro, geocodificador, gravar_json, gravar_csv, coletadas=None):
     casos, info = ler(conteudo)
     nao_cadastrados = associar_bairros(casos, cadastro)
+    usadas = coordenadas_coletadas.aplicar(casos, coletadas or {})
     novas = geocodificar(casos, geocodificador, config.get("geocodificacao_max_por_execucao"))
     if geocodificador:
         geocodificador.salvar_cache()
@@ -473,6 +455,7 @@ def executar(conteudo, pasta_saida, config, cadastro, geocodificador, gravar_jso
     r["resumo"].update({
         "gerado_em": datetime.now().isoformat(timespec="seconds"),
         "bairros_nao_cadastrados": nao_cadastrados,
+        "coordenadas_coletadas_usadas": usadas,
         "geocodificacao": {"ativada": bool(geocodificador), "consultas_novas": novas,
                            "erros": geocodificador.erros if geocodificador else 0},
     })
@@ -488,6 +471,8 @@ def executar(conteudo, pasta_saida, config, cadastro, geocodificador, gravar_jso
             "Latitude": lat, "Longitude": lon,
         })
     modelo_vigiavetor.gravar(os.path.join(pasta_saida, "vigiavetor_importacao.xlsx"), linhas_modelo)
+    r["resumo"]["enderecos_a_coletar"] = coordenadas_coletadas.gravar_lista(
+        os.path.join(pasta_saida, "coordenadas_a_coletar.xlsx"), casos)
     pacote = {"versao_formato": 1, **r}
     gravar_json(os.path.join(pasta_saida, "vigiavetor.json"), pacote)
     gravar_json(os.path.join(pasta_saida, "resumo.json"), r["resumo"])

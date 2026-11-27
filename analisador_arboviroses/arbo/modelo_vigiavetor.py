@@ -57,7 +57,7 @@ def coordenadas(caso, config):
     """Latitude/longitude para o modelo. Casos posicionados só no centro do bairro ficam em branco,
     a menos que ``modelo_vigiavetor_usar_centro_do_bairro`` seja true (evita pontos empilhados falsos)."""
     precisao = caso.get("vv_precisao_localizacao")
-    if precisao in ("endereco", "rua", "arquivo") or (
+    if precisao in ("coletada", "endereco", "rua", "arquivo") or (
             precisao == "bairro" and config.get("modelo_vigiavetor_usar_centro_do_bairro", False)):
         return caso.get("vv_latitude"), caso.get("vv_longitude")
     return None, None

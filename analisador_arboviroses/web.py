@@ -37,6 +37,7 @@ EXTENSOES = {".csv", ".txt", ".xlsx", ".xls", ".dbf"}
 ARQUIVOS = [
     ("vigiavetor_importacao.xlsx", "Planilha no modelo de importação do Vigiavetor"),
     ("vigiavetor.xlsx", "Análise completa em Excel (todas as abas)"),
+    ("coordenadas_a_coletar.xlsx", "Endereços sem coordenada, para coletar em campo"),
     ("vigiavetor.json", "Pacote completo em JSON"),
     ("alertas.json", "Alertas"), ("alertas.csv", "Alertas (planilha)"),
     ("bairros.json", "Indicadores por bairro"), ("bairros.csv", "Indicadores por bairro (planilha)"),
@@ -120,6 +121,7 @@ def inicio():
         flash("Formato não aceito. Use CSV, TXT, XLSX ou DBF.")
         return redirect(url_for("inicio"))
 
+    coordenadas = [(f.read(), f.filename) for f in request.files.getlist("coordenadas") if f and f.filename]
     bairros = request.files.get("bairros")
     bairros_conteudo = bairros.read() if bairros and bairros.filename else None
     agravo = request.form.get("agravo") or None
@@ -136,7 +138,7 @@ def inicio():
         resultado = executar(arquivo.read(), arquivo.filename, pasta, config=config,
                              agravo_padrao=agravo, bairros_conteudo=bairros_conteudo,
                              data_referencia=date.fromisoformat(data_ref) if data_ref else None,
-                             geocodificar_enderecos=geocodificar)
+                             geocodificar_enderecos=geocodificar, coordenadas_conteudos=coordenadas)
     except ValueError as erro:
         shutil.rmtree(pasta, ignore_errors=True)
         flash(str(erro))

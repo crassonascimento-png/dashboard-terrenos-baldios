@@ -42,7 +42,7 @@
 <div class="cartao">
   <h2>Qualidade dos dados</h2>
   <p>{{ r.linhas_lidas }} linhas lidas · {{ r.total_confirmados }} confirmados · {{ r.duplicadas_removidas }} duplicadas removidas.</p>
-  <p>Localização dos confirmados: {{ r.localizacao.endereco + r.localizacao.arquivo }} pelo endereço, {{ r.localizacao.rua }} pela rua,
+  <p>Localização dos confirmados: {{ r.localizacao.coletada }} coletadas em campo, {{ r.localizacao.endereco + r.localizacao.arquivo }} pelo endereço, {{ r.localizacao.rua }} pela rua,
      {{ r.localizacao.bairro }} pelo centro do bairro, {{ r.localizacao.sem_localizacao }} sem localização.</p>
   {% if r.bairros_nao_cadastrados %}
   <p><b>Bairros sem cadastro</b> (inclua no bairros.csv, ou como apelido):

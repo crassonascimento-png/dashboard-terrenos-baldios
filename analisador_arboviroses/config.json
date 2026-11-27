@@ -25,6 +25,7 @@
   "geocodificacao_raio_rua_sem_bairro_km": 2,
   "geocodificacao_max_por_execucao": null,
   "arquivo_cache_geocodificacao": "cache/geocodificacao.json",
+  "pasta_coordenadas_coletadas": "dados/coordenadas",
 
   "niveis_incidencia_acumulada": { "media": 100, "alta": 300 },
   "alertas": {

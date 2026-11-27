@@ -113,3 +113,28 @@ def parse_float(valor):
     if math.isnan(numero):
         return None
     return numero
+
+
+# ---------------------------------------------------------------------------
+# Endereços
+# ---------------------------------------------------------------------------
+ABREVIACOES = {
+    "AV": "AVENIDA", "AVE": "AVENIDA", "R": "RUA", "TV": "TRAVESSA", "TR": "TRAVESSA", "TRAV": "TRAVESSA",
+    "AL": "ALAMEDA", "PC": "PRACA", "PCA": "PRACA", "ROD": "RODOVIA", "EST": "ESTRADA", "CJ": "CONJUNTO",
+    "CONJ": "CONJUNTO", "LOT": "LOTEAMENTO", "CONC": "CONDOMINIO", "COND": "CONDOMINIO",
+    "DR": "DOUTOR", "DES": "DESEMBARGADOR", "GOV": "GOVERNADOR", "PROF": "PROFESSOR", "PE": "PADRE",
+    "STA": "SANTA", "STO": "SANTO", "SEN": "SENADOR", "DEP": "DEPUTADO", "GAL": "GENERAL", "GEN": "GENERAL",
+    "CEL": "CORONEL", "MAL": "MARECHAL", "VER": "VEREADOR", "PRES": "PRESIDENTE", "ENG": "ENGENHEIRO",
+}
+
+
+def normalizar_logradouro(texto):
+    palavras = normalizar_texto(texto).split()
+    return " ".join(ABREVIACOES.get(p, p) for p in palavras)
+
+
+def normalizar_numero(valor):
+    t = normalizar_texto(valor).replace(" ", "")
+    if t in ("", "SN", "SNO", "0", "00", "SEMNUMERO", "SNUMERO"):
+        return ""
+    return t

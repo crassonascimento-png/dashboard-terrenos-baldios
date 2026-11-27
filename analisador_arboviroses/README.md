@@ -35,6 +35,26 @@ na mesma ordem, datas como `AAAA-MM-DD`, uma linha por caso confirmado.
   `"modelo_vigiavetor_usar_centro_do_bairro": true`.
 - Os textos de `Exame` e `Resultado` podem ser trocados em `modelo_vigiavetor_exame` e `modelo_vigiavetor_resultado`.
 
+## Coordenadas coletadas em campo
+
+Cada análise gera **`coordenadas_a_coletar.xlsx`**: um endereço por linha (bairro, rua, número, complemento,
+quantos casos e quais doenças) para os casos que ficaram só no centro do bairro ou sem localização.
+
+1. No Google Maps, toque e segure no local: aparecem as coordenadas (ex.: `-10.9123, -37.0567`).
+2. Cole na coluna **Coordenada** (ou preencha **Latitude** e **Longitude**). Vírgula decimal também vale.
+3. Pode preencher aos poucos: linhas sem coordenada são ignoradas.
+4. Guarde o arquivo preenchido em **`dados/coordenadas/`** (linha de comando) ou envie no campo
+   *Coordenadas coletadas* da página web. Pode haver vários arquivos.
+5. Nas próximas análises, essas coordenadas são usadas antes de consultar o mapa (precisão `coletada`),
+   entram no arquivo de importação do Vigiavetor e o endereço sai da lista. Cada endereço é coletado uma vez,
+   e vale também para as planilhas dos meses seguintes.
+
+- Se apagar o número, a coordenada vale para todos os casos daquela rua no bairro que não tenham coordenada exata.
+- Coordenadas a mais de 25 km do centro de Aracaju são ignoradas, com aviso (geralmente falta o sinal de menos).
+- A pasta `dados/` não vai para o Git, porque as coordenadas são de residências de pacientes.
+- Na página web publicada (Render), os arquivos do servidor se apagam a cada atualização: guarde suas
+  planilhas preenchidas e envie-as junto em cada análise.
+
 ## Bairros e população
 
 O `bairros.csv` traz os bairros de Aracaju, com a **população estimada de 2019** do *Anuário Estatístico de

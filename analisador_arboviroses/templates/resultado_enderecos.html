@@ -47,8 +47,11 @@
 
 <div class="cartao">
   <h2>Qualidade dos dados</h2>
-  <p>Localização no mapa: {{ r.localizacao.endereco }} no número exato, {{ r.localizacao.rua }} na rua, {{ r.localizacao.bairro }} pelo centro do bairro,
+  <p>Localização no mapa: {{ r.localizacao.coletada }} coletadas em campo, {{ r.localizacao.endereco }} no número exato, {{ r.localizacao.rua }} na rua, {{ r.localizacao.bairro }} pelo centro do bairro,
      {{ r.localizacao.sem_localizacao }} sem localização.</p>
+  {% if r.enderecos_a_coletar %}<p><b>{{ r.enderecos_a_coletar }} endereços ainda sem coordenada</b> —
+     baixe <a href="{{ url_for('baixar', token=token, nome='coordenadas_a_coletar.xlsx') }}">coordenadas_a_coletar.xlsx</a>
+     para coletar em campo.</p>{% endif %}
   {% if r.bairros_nao_cadastrados %}<p><b>Bairros sem cadastro:</b>
     {% for b, n in r.bairros_nao_cadastrados.items() %}{{ b }} ({{ n }}){% if not loop.last %}, {% endif %}{% endfor %}</p>{% endif %}
   {% for a in r.avisos %}<p class="dica">⚠ {{ a }}</p>{% endfor %}

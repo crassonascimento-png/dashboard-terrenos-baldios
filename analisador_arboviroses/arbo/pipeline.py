@@ -7,7 +7,7 @@ import os
 from datetime import date, datetime
 
 from .analise import AGRAVOS, analisar, associar_bairros, geocodificar
-from . import modelo_vigiavetor, secretaria
+from . import coordenadas_coletadas, modelo_vigiavetor, secretaria
 from .excel import gravar_excel
 from .geocodificacao import Geocodificador
 from .leitura import ler_arquivo, ler_bairros, mapear_colunas, preparar_casos
@@ -33,6 +33,7 @@ CONFIG_PADRAO = {
     "raio_municipio_km": 25,
     "geocodificacao_max_por_execucao": None,
     "arquivo_cache_geocodificacao": "cache/geocodificacao.json",
+    "pasta_coordenadas_coletadas": "dados/coordenadas",
     "niveis_incidencia_acumulada": {"media": 100, "alta": 300},
     "alertas": {
         "incidencia_4_semanas_100mil": {"atencao": 50, "alerta": 100, "critico": 300},
@@ -157,8 +158,11 @@ def _gravar_modelo(caminho, casos, colunas, config):
 
 def executar(conteudo, nome_arquivo, pasta_saida, config=None, agravo_padrao=None,
              bairros_conteudo=None, data_referencia=None, geocodificar_enderecos=None,
-             geocodificador=None, progresso=None):
+             geocodificador=None, progresso=None, coordenadas_conteudos=None):
     """Executa toda a análise e grava os arquivos em ``pasta_saida``.
+
+    ``coordenadas_conteudos``: lista extra de (conteúdo, nome) com coordenadas coletadas em campo,
+    além das que estão na pasta ``pasta_coordenadas_coletadas`` do config.
 
     Retorna o dicionário com resumo, alertas etc. (o mesmo de ``vigiavetor.json``).
     """
@@ -166,15 +170,23 @@ def executar(conteudo, nome_arquivo, pasta_saida, config=None, agravo_padrao=Non
     aviso = progresso or (lambda msg: None)
     os.makedirs(pasta_saida, exist_ok=True)
 
+    def carregar_coletadas(cadastro):
+        fontes = coordenadas_coletadas.ler_pasta(_caminho(config.get("pasta_coordenadas_coletadas")))
+        fontes += list(coordenadas_conteudos or [])
+        return coordenadas_coletadas.carregar(fontes, cadastro, config)
+
     if secretaria.detectar(conteudo, nome_arquivo):
         aviso("Planilha de endereços da Secretaria detectada.")
         cadastro = ler_bairros(bairros_conteudo) if bairros_conteudo else ler_bairros(_caminho(config.get("arquivo_bairros")))
+        coletadas, avisos_coleta = carregar_coletadas(cadastro)
         usar_geo = config.get("geocodificar", True) if geocodificar_enderecos is None else geocodificar_enderecos
         if usar_geo and geocodificador is None:
             geocodificador = Geocodificador(config, _caminho(config.get("arquivo_cache_geocodificacao")))
         pacote = secretaria.executar(conteudo, pasta_saida, config, cadastro,
-                                     geocodificador if usar_geo else None, _gravar_json, _gravar_csv)
+                                     geocodificador if usar_geo else None, _gravar_json, _gravar_csv, coletadas)
         pacote["resumo"]["arquivo_origem"] = os.path.basename(nome_arquivo)
+        pacote["resumo"]["coordenadas_coletadas_disponiveis"] = len(coletadas)
+        pacote["resumo"]["avisos"] += avisos_coleta
         _gravar_json(os.path.join(pasta_saida, "resumo.json"), pacote["resumo"])
         _gravar_json(os.path.join(pasta_saida, "vigiavetor.json"), pacote)
         return pacote
@@ -192,6 +204,9 @@ def executar(conteudo, nome_arquivo, pasta_saida, config=None, agravo_padrao=Non
         c["_nome"] = c.get(colunas["nome"], "") if "nome" in colunas else ""
 
     nao_cadastrados = associar_bairros(casos, cadastro)
+    coletadas, avisos_coleta = carregar_coletadas(cadastro)
+    usadas = coordenadas_coletadas.aplicar(casos, coletadas)
+    info["avisos"] += avisos_coleta
 
     usar_geo = config.get("geocodificar", True) if geocodificar_enderecos is None else geocodificar_enderecos
     if usar_geo and geocodificador is None:
@@ -215,6 +230,8 @@ def executar(conteudo, nome_arquivo, pasta_saida, config=None, agravo_padrao=Non
         "duplicadas_removidas": info["duplicadas_removidas"],
         "total_confirmados": sum(1 for c in casos if c["vv_confirmado"]),
         "bairros_nao_cadastrados": nao_cadastrados,
+        "coordenadas_coletadas_disponiveis": len(coletadas),
+        "coordenadas_coletadas_usadas": usadas,
         "geocodificacao": {
             "ativada": bool(geocodificador),
             "consultas_novas": novas,
@@ -252,6 +269,8 @@ def executar(conteudo, nome_arquivo, pasta_saida, config=None, agravo_padrao=Non
     _gravar_json(os.path.join(pasta_saida, "mapa_bairros.geojson"), resultado["mapa_bairros"])
 
     _gravar_modelo(os.path.join(pasta_saida, "vigiavetor_importacao.xlsx"), casos, colunas, config)
+    resultado["resumo"]["enderecos_a_coletar"] = coordenadas_coletadas.gravar_lista(
+        os.path.join(pasta_saida, "coordenadas_a_coletar.xlsx"), casos)
 
     pacote = {"versao_formato": 1, **resultado}
     _gravar_json(os.path.join(pasta_saida, "vigiavetor.json"), pacote)

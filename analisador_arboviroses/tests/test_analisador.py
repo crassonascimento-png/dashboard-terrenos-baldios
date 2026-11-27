@@ -340,3 +340,50 @@ def test_rua_sem_bairro_respeita_distancia():
     longe = Geocodificador(cfg, sessao=Sessao((-10.99, -37.05))).localizar_rua_sem_bairro(
         "RUA X", "Centro", (-10.91, -37.05))
     assert longe is None
+
+
+def test_interpretar_coordenada():
+    from arbo.coordenadas_coletadas import interpretar
+    assert interpretar("-10.9123, -37.0567") == (-10.9123, -37.0567)
+    assert interpretar("-10.9123,-37.0567") == (-10.9123, -37.0567)
+    assert interpretar("-10,9123; -37,0567") == (-10.9123, -37.0567)
+    assert interpretar("-10,9123, -37,0567") == (-10.9123, -37.0567)
+    assert interpretar("", "-10,91", "-37,05") == (-10.91, -37.05)
+    assert interpretar("") is None
+
+
+def test_ciclo_coordenadas_coletadas(tmp_path):
+    from openpyxl import load_workbook
+    cfg = carregar_config()
+    cfg["pasta_coordenadas_coletadas"] = str(tmp_path / "nao_existe")
+    s1 = tmp_path / "s1"
+    r = executar(_planilha_secretaria(), "e.xlsx", str(s1), config=cfg, geocodificar_enderecos=False)
+    lista = s1 / "coordenadas_a_coletar.xlsx"
+    wb = load_workbook(lista)
+    ws = wb["A coletar"]
+    cab = [c.value for c in ws[1]]
+    linhas = {(ws.cell(i, 2).value, ws.cell(i, 3).value): i for i in range(2, ws.max_row + 1)}
+    pendentes_antes = r["resumo"]["enderecos_a_coletar"]
+    assert pendentes_antes == ws.max_row - 1 and "Coordenada" in cab
+    # preenche: 1 pelo formato do Google Maps, 1 fora do município (erro), 1 só a rua (apaga o número)
+    ws.cell(linhas[("RUA JOSIAS VIEIRA DANTAS", "328")], 7, "-10.9640, -37.0430")
+    ws.cell(linhas[("AV. JOAO RIBEIRO", "5")], 7, "10.89, 37.05")
+    i = linhas[("RUA JOSIAS VIEIRA DANTAS", "50")]
+    ws.cell(i, 3).value = None  # apaga o número
+    ws.cell(i, 8, -10.9650)
+    ws.cell(i, 9, -37.0440)
+    import io as _io
+    buf = _io.BytesIO()
+    wb.save(buf)
+
+    s2 = tmp_path / "s2"
+    r2 = executar(_planilha_secretaria(), "e.xlsx", str(s2), config=cfg, geocodificar_enderecos=False,
+                  coordenadas_conteudos=[(buf.getvalue(), "coletadas.xlsx")])
+    res = r2["resumo"]
+    # 328 tem 3 casos; "só a rua" vale para os outros casos dessa rua (10, S/N, 50) -> 3 casos
+    assert res["localizacao"]["coletada"] == 6
+    assert res["coordenadas_coletadas_usadas"] == 6
+    assert any("fora do município" in a for a in res["avisos"])
+    assert res["enderecos_a_coletar"] < pendentes_antes
+    imp = load_workbook(s2 / "vigiavetor_importacao.xlsx").worksheets[0]
+    assert imp.cell(2, 18).value == -10.964 and imp.cell(2, 19).value == -37.043

@@ -82,7 +82,7 @@ def geocodificar(casos, geocodificador, maximo=None):
                         cad["coordenadas_origem"] = "openstreetmap"
 
     for c in casos:
-        if not c["vv_confirmado"] or c["vv_precisao_localizacao"] == "arquivo":
+        if not c["vv_confirmado"] or c["vv_precisao_localizacao"] in ("arquivo", "coletada"):
             continue
         cad = c.get("_cadastro") or {}
         ref = (cad["latitude"], cad["longitude"]) if cad.get("latitude") is not None and cad.get("longitude") is not None else None
@@ -271,7 +271,7 @@ def analisar(casos, cadastro, config, data_ref=None):
         "total_alertas": len(alertas),
         "alertas_por_nivel": {n: sum(1 for a in alertas if a["nivel"] == n) for n in ("critico", "alerta", "atencao")},
         "localizacao": {p: sum(1 for c in confirmados if c["vv_precisao_localizacao"] == p)
-                        for p in ("arquivo", "endereco", "rua", "bairro", "sem_localizacao")},
+                        for p in ("coletada", "arquivo", "endereco", "rua", "bairro", "sem_localizacao")},
     }
     for agravo in AGRAVOS:
         lista = [c for c in confirmados if c["vv_agravo"] == agravo]
@@ -390,7 +390,7 @@ def _aglomerados(confirmados, cfg, data_ref, ano_ref, semana_ref):
     """Casos com endereço próximos no espaço e no tempo (qualquer arbovirose: mesmo vetor)."""
     janela = timedelta(days=cfg["janela_dias"])
     pontos = [c for c in confirmados
-              if c["vv_precisao_localizacao"] in ("endereco", "arquivo")
+              if c["vv_precisao_localizacao"] in ("endereco", "arquivo", "coletada")
               and data_ref - janela <= _data(c["vv_data_sintomas"]) <= data_ref]
     pai = list(range(len(pontos)))
 
