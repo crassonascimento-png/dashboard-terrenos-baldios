@@ -1,5 +1,5 @@
 bairro;microarea;populacao;latitude;longitude;apelidos
-Aeroporto;;;;;
+Aeroporto;;;;;AERPORTO|AREOPORTO
 América;;;;;
 Atalaia;;;;;ATALAIA VELHA|ATALAIA NOVA
 Bugio;;;;;CONJ BUGIO|CONJUNTO BUGIO
@@ -37,5 +37,11 @@ Siqueira Campos;;;;;
 Soledade;;;;;
 Suíssa;;;;;SUISSA|SUICA
 Treze de Julho;;;;;13 DE JULHO
-Zona de Expansão;;;;;ZONA DE EXPANSAO|ZONA EXPANSAO|MOSQUEIRO|ARUANA|ROBALO|AREIA BRANCA|SAO JOSE DOS NAUFRAGOS
+Zona de Expansão;;;;;ZONA DE EXPANSAO|ZONA EXPANSAO|ARUANA|SAO JOSE DOS NAUFRAGOS
+Mosqueiro;;;;;POVOADO MOSQUEIRO
+Robalo;;;;;POVOADO ROBALO
+Areia Branca;;;;;POVOADO AREIA BRANCA
+Gameleira;;;;;POVOADO GAMELEIRA
+Marivan;;;;;CONJ MARIVAN|CONJUNTO MARIVAN
+Dom Luciano;;;;;
 17 de Março;;;;;DEZESSETE DE MARCO|17 DE MARCO

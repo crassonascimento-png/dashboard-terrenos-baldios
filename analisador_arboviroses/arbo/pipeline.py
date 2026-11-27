@@ -7,6 +7,7 @@ import os
 from datetime import date, datetime
 
 from .analise import AGRAVOS, analisar, associar_bairros, geocodificar
+from . import secretaria
 from .excel import gravar_excel
 from .geocodificacao import Geocodificador
 from .leitura import ler_arquivo, ler_bairros, mapear_colunas, preparar_casos
@@ -116,6 +117,19 @@ def executar(conteudo, nome_arquivo, pasta_saida, config=None, agravo_padrao=Non
     config = config or carregar_config()
     aviso = progresso or (lambda msg: None)
     os.makedirs(pasta_saida, exist_ok=True)
+
+    if secretaria.detectar(conteudo, nome_arquivo):
+        aviso("Planilha de endereços da Secretaria detectada.")
+        cadastro = ler_bairros(bairros_conteudo) if bairros_conteudo else ler_bairros(_caminho(config.get("arquivo_bairros")))
+        usar_geo = config.get("geocodificar", True) if geocodificar_enderecos is None else geocodificar_enderecos
+        if usar_geo and geocodificador is None:
+            geocodificador = Geocodificador(config, _caminho(config.get("arquivo_cache_geocodificacao")))
+        pacote = secretaria.executar(conteudo, pasta_saida, config, cadastro,
+                                     geocodificador if usar_geo else None, _gravar_json, _gravar_csv)
+        pacote["resumo"]["arquivo_origem"] = os.path.basename(nome_arquivo)
+        _gravar_json(os.path.join(pasta_saida, "resumo.json"), pacote["resumo"])
+        _gravar_json(os.path.join(pasta_saida, "vigiavetor.json"), pacote)
+        return pacote
 
     aviso("Lendo arquivo...")
     df = ler_arquivo(conteudo, nome_arquivo)

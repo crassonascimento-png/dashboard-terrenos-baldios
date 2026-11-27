@@ -46,6 +46,20 @@ def main(argv=None):
         return 1
 
     res = r["resumo"]
+    if res.get("tipo") == "enderecos_secretaria":
+        print(f"\nPeríodo: {res['periodo']}  |  {res['total_casos']} casos "
+              f"(dengue {res['total_dengue']}, chikungunya {res['total_chikungunya']}, zika {res['total_zika']})")
+        print("  Bairros com mais casos: " + ", ".join(f"{b['bairro']} ({b['total']})" for b in r["bairros"][:8]))
+        print(f"  Alertas: {res['total_alertas']} {res['alertas_por_nivel']}")
+        for a in r["alertas"][:12]:
+            print(f"   [{a['nivel'].upper():8}] {a['mensagem']}")
+        print(f"  Localização: {res['localizacao']}")
+        if res["bairros_nao_cadastrados"]:
+            print(f"  Bairros sem cadastro: {res['bairros_nao_cadastrados']}")
+        for aviso in res["avisos"]:
+            print(f"  Aviso: {aviso}")
+        print(f"\nArquivos gravados em: {os.path.abspath(args.saida)}")
+        return 0
     print(f"\nSemana epidemiológica {res['semana_epidemiologica']}/{res['ano_epidemiologico']} "
           f"(referência {res['data_referencia']})")
     for agravo, d in res["agravos"].items():

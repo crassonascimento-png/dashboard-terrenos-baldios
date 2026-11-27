@@ -99,7 +99,53 @@ def test_bairros_reais_de_aracaju():
     cad = ler_bairros(os.path.join(PASTA, "bairros.csv"))
     assert cad["18 DO FORTE"]["bairro"] == "Dezoito do Forte"
     assert cad["AUGUSTO FRANCO"]["bairro"] == "Farolândia"
-    assert cad["MOSQUEIRO"]["bairro"] == "Zona de Expansão"
+    assert cad["MOSQUEIRO"]["bairro"] == "Mosqueiro"
+    assert cad["AERPORTO"]["bairro"] == "Aeroporto"
+
+
+def _planilha_secretaria():
+    from openpyxl import Workbook
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "CONFIRMADOS DENGUE"
+    ws.append(["ENDEREÇOS DOS CASOS CONFIRMADOS - AGOSTO A 23 DE OUTUBRO 2026"])
+    for _ in range(3):
+        ws.append(["COROA DO MEIO", "RUA JOSIAS VIEIRA DANTAS", "328", None])
+    ws.append(["COROA DO MEIO", "R JOSIAS VIEIRA DANTAS,", "10", None])
+    ws.append(["COROA DO MEIO", "RUA JOSIAS VIEIRA DANTAS", "S/N", None])
+    ws.append(["18 DO FORTE", "AV. JOAO RIBEIRO", "5", "CASA"])
+    ws.append(["CAPUCHO", None, None, None])
+    ws2 = wb.create_sheet("CONFIRMADOS CHIKUNGUNYA ")
+    ws2.append(["ENDEREÇOS DOS CASOS CONFIRMADOS CHIKUNGUNYA - AGOSTO A 23 DE OUTUBRO 2026"])
+    ws2.append(["COROA DO MEIO", "AVENIDA JOSIAS VIEIRA DANTAS", "99", None])
+    ws2.append(["COROA DO MEIO", "RUA JOSIAS VIEIRA DANTAS", "50", None])
+    wb.create_sheet("Plan3")
+    buf = io.BytesIO()
+    wb.save(buf)
+    return buf.getvalue()
+
+
+def test_planilha_da_secretaria(tmp_path):
+    cfg = carregar_config()
+    cfg["alertas_enderecos"] = {"rua_casos": {"alerta": 5, "critico": 10}, "cocirculacao_rua_minimo": 2}
+    r = executar(_planilha_secretaria(), "enderecos.xlsx", str(tmp_path), config=cfg, geocodificar_enderecos=False)
+    res = r["resumo"]
+    assert res["tipo"] == "enderecos_secretaria"
+    assert res["periodo"] == "AGOSTO A 23 DE OUTUBRO 2026"
+    assert (res["total_casos"], res["total_dengue"], res["total_chikungunya"]) == (9, 7, 2)
+    coroa = r["bairros"][0]
+    assert coroa["bairro"] == "Coroa do Meio" and coroa["total"] == 7 and coroa["ranking"] == 1
+    assert any(b["bairro"] == "Dezoito do Forte" for b in r["bairros"])
+    rua = r["ruas"][0]  # "R JOSIAS..." e "RUA JOSIAS..." viram a mesma rua; "AVENIDA" é outra
+    assert rua["total"] == 6 and rua["chikungunya"] == 1
+    assert r["enderecos_repetidos"][0]["total"] == 3  # S/N não conta como mesmo endereço
+    tipos = {a["tipo"] for a in r["alertas"]}
+    assert {"rua_com_muitos_casos", "endereco_repetido", "cocirculacao"} <= tipos
+    assert any("sem rua" in a for a in res["avisos"])
+    from openpyxl import load_workbook
+    wb = load_workbook(tmp_path / "vigiavetor.xlsx")
+    assert wb.sheetnames == ["Resumo", "Alertas", "Bairros", "Ruas", "Enderecos_Repetidos", "Mapa_Casos", "Casos"]
+    assert wb["Casos"].max_row == 10
 
 class GeoFalso:
     """Substitui o Nominatim: devolve coordenadas fixas por logradouro."""
