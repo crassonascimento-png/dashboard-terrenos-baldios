@@ -22,6 +22,7 @@
 
   "geocodificar": true,
   "geocodificacao_raio_max_km": 5,
+  "geocodificacao_raio_rua_sem_bairro_km": 2,
   "geocodificacao_max_por_execucao": null,
   "arquivo_cache_geocodificacao": "cache/geocodificacao.json",
 

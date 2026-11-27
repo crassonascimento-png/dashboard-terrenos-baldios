@@ -101,6 +101,13 @@ def geocodificar(casos, geocodificador, maximo=None):
                 ponto = geocodificador.localizar(rua, c["vv_bairro"], ref)
                 novas += geocodificador.consultas - antes
                 precisao = "rua"
+        if not ponto and geocodificador and rua and ref and hasattr(geocodificador, "localizar_rua_sem_bairro"):
+            # Ainda nada: tenta a rua só com o município, aceitando perto do bairro informado
+            antes = geocodificador.consultas
+            if cabe():
+                ponto = geocodificador.localizar_rua_sem_bairro(rua, c["vv_bairro"], ref)
+                novas += geocodificador.consultas - antes
+                precisao = "rua"
         if ponto:
             c["vv_latitude"], c["vv_longitude"] = round(ponto[0], 6), round(ponto[1], 6)
             c["vv_precisao_localizacao"] = "rua" if precisao == "rua" or (len(ponto) > 2 and ponto[2] == "rua") else "endereco"

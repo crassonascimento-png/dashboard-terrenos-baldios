@@ -21,6 +21,7 @@ class Geocodificador:
         self.intervalo = float(config.get("geocodificacao_intervalo_segundos", 1.1))
         self.raio_max_m = float(config.get("geocodificacao_raio_max_km", 5)) * 1000
         self.raio_municipio_m = float(config.get("raio_municipio_km", 25)) * 1000
+        self.raio_rua_sem_bairro_m = float(config.get("geocodificacao_raio_rua_sem_bairro_km", 2)) * 1000
         self.caminho_cache = caminho_cache
         self.sessao = sessao or requests.Session()
         # O Nominatim recusa o User-Agent padrão do requests ("python-requests/x")
@@ -64,8 +65,8 @@ class Geocodificador:
         uf = self.config.get("uf", "")
         return f"{municipio} - {uf}" if uf else municipio
 
-    def _buscar(self, consulta, referencia, raio_m):
-        chave = normalizar_texto(consulta)
+    def _buscar(self, consulta, referencia, raio_m, chave=None):
+        chave = normalizar_texto(chave or consulta)
         if chave in self.cache:
             valor = self.cache[chave]
             if not valor:
@@ -114,6 +115,16 @@ class Geocodificador:
         else:
             referencia, raio = self._referencia_municipio(), self.raio_municipio_m
         return self._buscar(self.chave_endereco(endereco, bairro), referencia, raio)
+
+    def localizar_rua_sem_bairro(self, rua, bairro, referencia):
+        """Busca só "rua, município" (o bairro anotado pode não ser o mesmo do mapa) e aceita
+        o resultado apenas perto do centro do bairro informado."""
+        if not rua or not referencia:
+            return None
+        consulta = ", ".join(p for p in [rua, self._cidade(), "Brasil"] if p)
+        ponto = self._buscar(consulta, referencia, self.raio_rua_sem_bairro_m,
+                             chave=f"SEM BAIRRO {bairro} | {consulta}")
+        return (ponto[0], ponto[1], "rua") if ponto else None
 
     def localizar_bairro(self, bairro):
         """Centro aproximado do bairro, dentro do município."""

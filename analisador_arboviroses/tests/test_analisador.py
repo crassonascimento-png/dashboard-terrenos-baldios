@@ -310,3 +310,33 @@ def test_modelo_importacao_secretaria(tmp_path):
     assert (v["Endereço"], v["Número"], v["Bairro"], v["Exame"], v["Resultado"]) == \
         ("RUA JOSIAS VIEIRA DANTAS", "328", "Coroa do Meio", "Dengue", "Positivo")
     assert v["Latitude"] is None  # sem localização: fica em branco
+
+
+def test_rua_sem_bairro_respeita_distancia():
+    from arbo.geocodificacao import Geocodificador
+
+    class Sessao:
+        headers = {}
+
+        def __init__(self, pontos):
+            self.pontos = pontos
+
+        def get(self, url, params, timeout):
+            ponto = self.pontos
+
+            class R:
+                def raise_for_status(self):
+                    pass
+
+                def json(self):
+                    return [{"lat": str(ponto[0]), "lon": str(ponto[1]), "addresstype": "road"}]
+            return R()
+
+    cfg = carregar_config()
+    cfg["geocodificacao_intervalo_segundos"] = 0
+    perto = Geocodificador(cfg, sessao=Sessao((-10.905, -37.05))).localizar_rua_sem_bairro(
+        "RUA X", "Centro", (-10.91, -37.05))
+    assert perto == (-10.905, -37.05, "rua")
+    longe = Geocodificador(cfg, sessao=Sessao((-10.99, -37.05))).localizar_rua_sem_bairro(
+        "RUA X", "Centro", (-10.91, -37.05))
+    assert longe is None
