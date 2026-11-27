@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block conteudo %}
+<div class="cartao">
+  {% if sem_senha %}
+    <h2>Configuração pendente</h2>
+    <p>Defina a variável de ambiente <code>ANALISADOR_SENHA</code> no servidor para liberar o acesso.
+       Os arquivos do SINAN têm dados pessoais, então a página só funciona com senha.</p>
+  {% else %}
+    <h2>Entrar</h2>
+    <form method="post">
+      <label for="senha">Senha</label>
+      <input type="password" id="senha" name="senha" required autofocus>
+      <button type="submit">Entrar</button>
+    </form>
+  {% endif %}
+</div>
+{% endblock %}

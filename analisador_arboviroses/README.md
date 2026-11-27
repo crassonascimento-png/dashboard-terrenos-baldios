@@ -1,0 +1,213 @@
+# Analisador de Arboviroses → Vigiavetor
+
+Lê as exportações do **SINAN** (dengue, chikungunya e zika) e identifica os **casos confirmados**.
+Depois localiza os endereços no mapa, calcula os indicadores por **bairro e microárea** e gera os
+**alertas automáticos**. O resultado sai em arquivos JSON/CSV/GeoJSON, prontos para carregar no Vigiavetor.
+
+Esta pasta é independente do app de terrenos baldios e não altera nenhum arquivo dele.
+
+**Já configurado para Aracaju-SE** (código IBGE 2800308; o SINAN usa `280030`). O resultado principal é a
+planilha **`vigiavetor.xlsx`**, para alimentar o Vigiavetor.
+
+## Arquivo para importar no Vigiavetor: `vigiavetor_importacao.xlsx`
+
+Segue exatamente o modelo `modelo_importacao_arboviroses.xlsx` do Vigiavetor: aba **Notificações**, 19 colunas
+na mesma ordem, datas como `AAAA-MM-DD`, uma linha por caso confirmado.
+
+| Coluna do Vigiavetor | Exportação do SINAN | Planilha de endereços da Secretaria |
+|---|---|---|
+| Unidade Solicitante | `ID_UNIDADE` | — |
+| Data da solicitação | `DT_NOTIFIC` | — |
+| Data do 1º sintoma | `DT_SIN_PRI` | — |
+| CNS do Paciente | `ID_CNS_SUS` | — |
+| Paciente | `NM_PACIENT` | — |
+| Data de nascimento / Idade / Sexo | `DT_NASC` / `NU_IDADE_N` / `CS_SEXO` | — |
+| Nome da mãe | `NM_MAE_PAC` | — |
+| Endereço / Número / Bairro | `NM_LOGRADO` / `NU_NUMERO` / `NM_BAIRRO` (padronizado) | colunas da planilha (bairro padronizado) |
+| CEP / Telefone | `NU_CEP` / `ID_DDD` + `NU_TELEFON` | — |
+| Exame | doença (`Dengue`, `Chikungunya`, `Zika`) | doença da aba |
+| Data da coleta | `DT_NS1`, `DT_SORO`, `DT_PCR`... (a primeira preenchida) | — |
+| Resultado | `Positivo` | `Positivo` |
+| Latitude / Longitude | geocodificação | geocodificação |
+
+- Latitude/longitude ficam **em branco** quando o caso só pôde ser posicionado no centro do bairro, para não
+  criar pontos empilhados falsos no mapa. Para preencher assim mesmo, use
+  `"modelo_vigiavetor_usar_centro_do_bairro": true`.
+- Os textos de `Exame` e `Resultado` podem ser trocados em `modelo_vigiavetor_exame` e `modelo_vigiavetor_resultado`.
+
+## Coordenadas coletadas em campo
+
+Cada análise gera **`coordenadas_a_coletar.xlsx`**: um endereço por linha (bairro, rua, número, complemento,
+quantos casos e quais doenças) para os casos que ficaram só no centro do bairro ou sem localização.
+
+1. No Google Maps, toque e segure no local: aparecem as coordenadas (ex.: `-10.9123, -37.0567`).
+2. Cole na coluna **Coordenada** (ou preencha **Latitude** e **Longitude**). Vírgula decimal também vale.
+3. Pode preencher aos poucos: linhas sem coordenada são ignoradas.
+4. Guarde o arquivo preenchido em **`dados/coordenadas/`** (linha de comando) ou envie no campo
+   *Coordenadas coletadas* da página web. Pode haver vários arquivos.
+5. Nas próximas análises, essas coordenadas são usadas antes de consultar o mapa (precisão `coletada`),
+   entram no arquivo de importação do Vigiavetor e o endereço sai da lista. Cada endereço é coletado uma vez,
+   e vale também para as planilhas dos meses seguintes.
+
+- Se apagar o número, a coordenada vale para todos os casos daquela rua no bairro que não tenham coordenada exata.
+- Coordenadas a mais de 25 km do centro de Aracaju são ignoradas, com aviso (geralmente falta o sinal de menos).
+- A pasta `dados/` não vai para o Git, porque as coordenadas são de residências de pacientes.
+- Na página web publicada (Render), os arquivos do servidor se apagam a cada atualização: guarde suas
+  planilhas preenchidas e envie-as junto em cada análise.
+
+## Bairros e população
+
+O `bairros.csv` traz os bairros de Aracaju, com a **população estimada de 2019** do *Anuário Estatístico de
+Aracaju 2023* (Quadro 2.2.6, fonte IBGE: Censo 2010 e PNAD Contínua). Ele também traz as grafias usadas pela
+Secretaria e pelo SINAN (`18 DO FORTE`, `CONJ AUGUSTO FRANCO` → Farolândia, `AERPORTO` → Aeroporto...).
+
+- **Mosqueiro, Robalo, Areia Branca e Gameleira** aparecem separados no mapa e nas ruas, mas a coluna `grupo`
+  os soma à **Zona de Expansão** para calcular a incidência, porque a população oficial é a do conjunto.
+- **Marivan, Dom Luciano e 17 de Março** não têm população no Anuário (17 de Março aparece com 0, pois foi
+  criado depois de 2010). Neles, o nível é calculado pelo número de casos. Se conseguir a população,
+  é só preencher.
+- `latitude`/`longitude` podem ficar vazias: o centro de cada bairro é buscado no OpenStreetMap e guardado em cache.
+
+## Planilha de endereços da Secretaria
+
+A planilha *"ENDEREÇOS DOS CASOS CONFIRMADOS ..."* (uma aba por doença: bairro, rua, número e complemento)
+é reconhecida automaticamente. Como ela não tem datas, a análise é **espacial**:
+
+| Aba do Excel | Conteúdo |
+|---|---|
+| Resumo | Período, totais por doença, qualidade da localização |
+| Alertas | Bairros com mais casos ou incidência alta, ruas com 5 ou mais casos, endereços com 3 ou mais casos, dengue e chikungunya na mesma rua (5 ou mais casos), aglomerados de 10 ou mais casos num círculo de 200 m |
+| Bairros | Ranking, casos por doença, % do município, incidência |
+| Ruas | Casos por rua (abreviações padronizadas: AV → AVENIDA, R → RUA...) |
+| Enderecos_Repetidos | Endereços com 2 ou mais casos (prédios, condomínios, casas com mais de um doente) |
+| Mapa_Casos | Latitude/longitude de cada caso. Precisão: `endereco` (número exato), `rua` (o OpenStreetMap não tem o número e devolve o ponto da rua; é o mais comum em Aracaju) ou `bairro` (centro do bairro) |
+| Casos | Todas as linhas, com a aba e a linha de origem |
+
+Os limites ficam em `config.json` → `alertas_enderecos`.
+
+## Duas formas de usar
+
+### 1. Pela página web (pelo celular)
+
+1. Abra a página e entre com a senha.
+2. Envie o arquivo exportado do SINAN (CSV, TXT, Excel ou DBF).
+3. Veja o resumo e os alertas, e baixe o `.zip` com todos os arquivos.
+
+Para publicar no Render (como o app de terrenos):
+
+- **Root Directory:** `analisador_arboviroses`
+- **Build Command:** `pip install -r requirements.txt`
+- **Start Command:** `gunicorn web:app --workers 1 --timeout 300`
+- **Variáveis de ambiente:**
+  - `ANALISADOR_SENHA`: senha de acesso (obrigatória; sem ela a página não libera o uso)
+  - `ANALISADOR_SECRET_KEY`: uma frase longa e aleatória
+  - `GEOCODIFICACAO_MAX_WEB` (opcional, padrão 150): máximo de endereços **novos** consultados
+    por envio, para a página não estourar o tempo limite. Os já consultados ficam em cache.
+
+### 2. Pela linha de comando (computador)
+
+```bash
+cd analisador_arboviroses
+pip install -r requirements.txt
+python analisar.py caminho/DENGON.csv                 # detecta o agravo pela coluna ID_AGRAVO
+python analisar.py chik.dbf --agravo chikungunya --saida saida/chik
+python analisar.py dengue.xlsx --sem-geocodificacao --data-referencia 2026-11-21
+```
+
+Para testar com dados fictícios: `python analisar.py exemplos/sinan_exemplo_ficticio.csv --sem-geocodificacao`
+
+## Configuração
+
+### `config.json`
+
+| Campo | Para que serve |
+|---|---|
+| `municipio`, `uf` | Usados para localizar os endereços (Aracaju, SE). |
+| `centro_municipio_latitude/longitude`, `raio_municipio_km` | Centro de Aracaju e raio (25 km). Endereços localizados fora dele são descartados. |
+| `codigo_municipio_residencia` | Código IBGE (6 dígitos). Se preenchido, só conta residentes do município (`ID_MN_RESI`). |
+| `classificacao_confirmada` | Códigos de `CLASSI_FIN` que contam como confirmado. Padrão SINAN: dengue 10/11/12, chikungunya 13, zika 1. |
+| `incluir_em_investigacao` | `true` conta também os casos sem classificação final. |
+| `incluir_dados_pessoais_nas_saidas` | `true` (padrão escolhido) mantém nome, endereço etc. nos arquivos gerados. `false` remove. |
+| `mapeamento_colunas` | Se a sua planilha usa outros nomes de coluna, ex.: `{"bairro": "BAIRRO_RES"}`. |
+| `geocodificar` | Liga ou desliga a localização dos endereços. |
+| `geocodificacao_raio_max_km` | Descarta endereços localizados a mais de X km do centro do bairro (evita rua homônima em outra cidade). |
+| `niveis_incidencia_acumulada` | Faixas de incidência no ano por 100 mil hab. (padrão do Ministério da Saúde: <100 baixa, 100–299 média, ≥300 alta). |
+| `alertas` | Limites dos alertas (veja abaixo). |
+
+### `bairros.csv` (cadastro de bairros)
+
+```
+bairro;microarea;populacao;latitude;longitude;apelidos
+Vila Nova;02;8500;-10.0100;-48.0050;VL NOVA|V NOVA
+```
+
+- `populacao` é necessária para calcular **incidência** e os alertas de incidência.
+- `latitude`/`longitude` (centro do bairro) servem de posição para casos cujo endereço não foi encontrado, e
+  de referência para validar a geocodificação.
+- `apelidos` faz o nome escrito no SINAN casar com o bairro cadastrado (separe por `|`).
+- Os bairros que aparecem no SINAN e não estão no cadastro são listados em `resumo.json` → `bairros_nao_cadastrados`.
+
+Os arquivos em `exemplos/` são **fictícios** (só para testes).
+
+## Alertas gerados
+
+| Tipo | Quando dispara | Nível |
+|---|---|---|
+| `incidencia_alta` | Incidência nas últimas 4 semanas ≥ 50 / 100 / 300 por 100 mil hab. | atenção / alerta / crítico |
+| `aumento_casos` | Últimas 2 semanas ≥ 1,5× as 2 anteriores e pelo menos 5 casos | atenção (alerta se ≥ 10) |
+| `aglomerado` | ≥ 3 casos com endereço num raio de 200 m em 14 dias (soma as três doenças, já que o mosquito é o mesmo) | alerta (crítico se ≥ 6) |
+| `obito` | Óbito pelo agravo (`EVOLUCAO = 2`) nas últimas 4 semanas | crítico |
+| `obito_em_investigacao` | `EVOLUCAO = 4` nas últimas 4 semanas | alerta |
+| `dengue_grave` | Caso de dengue grave nas últimas 4 semanas | alerta |
+
+Todos os limites podem ser ajustados no `config.json`.
+
+## Arquivos gerados (para o Vigiavetor)
+
+| Arquivo | Conteúdo |
+|---|---|
+| `vigiavetor.xlsx` | **Planilha para o Vigiavetor.** Abas: *Resumo*, *Alertas* (coloridas por nível), *Bairros*, *Microareas*, *Semanas* (uma coluna por doença), *Mapa_Casos* (latitude/longitude de cada caso) e *Casos_Confirmados* (todas as colunas). |
+| `vigiavetor.json` | **Pacote único** com `resumo`, `bairros`, `microareas`, `semanas`, `alertas`, `mapa_casos`, `mapa_bairros`. |
+| `resumo.json` | Semana epidemiológica de referência, totais por doença, óbitos, sexo, faixa etária e qualidade dos dados. |
+| `bairros.json` / `.csv` | Por bairro e doença: casos no ano, nas últimas 4 e 2 semanas, incidência, nível, tendência e óbitos. |
+| `microareas.json` / `.csv` | Casos no ano por bairro + microárea. |
+| `semanas.json` / `.csv` | Casos por ano, semana epidemiológica e doença (para a curva epidêmica). |
+| `alertas.json` / `.csv` | Lista de alertas, do mais grave para o menos grave, com mensagem pronta para exibir. |
+| `mapa_casos.geojson` | Um ponto por caso confirmado. `precisao_localizacao` = `endereco`, `arquivo` ou `bairro`; `recente` = últimas 4 semanas. |
+| `mapa_bairros.geojson` | Um ponto por bairro com todos os indicadores. |
+| `casos_confirmados.csv` | Casos confirmados com **todas** as colunas originais + colunas calculadas `vv_*`. |
+| `casos_processados.csv` | Todas as notificações (inclusive descartadas), com `vv_confirmado`. |
+
+Os CSV usam `;` e UTF-8 com BOM, para abrir direto no Excel.
+
+## Como os dados são tratados
+
+- **Semana epidemiológica:** semanas de domingo a sábado, padrão do Ministério da Saúde. A data usada é o início dos sintomas
+  (`DT_SIN_PRI`), ou a data de notificação quando não houver.
+- **Data de referência:** por padrão, o início de sintomas mais recente do arquivo. As "últimas 4 semanas"
+  são as 4 semanas epidemiológicas que terminam nela.
+- **Duplicadas:** mesma notificação (`NU_NOTIFIC`), mesmo agravo e mesma data contam uma vez só.
+- **Colunas reconhecidas automaticamente:** os nomes do SINAN (`NU_NOTIFIC`, `ID_AGRAVO`, `DT_SIN_PRI`, `NM_BAIRRO`,
+  `NM_LOGRADO`, `NU_NUMERO`, `CLASSI_FIN`, `EVOLUCAO`, `CS_SEXO`, `NU_IDADE_N`...) e variações comuns
+  ("Bairro", "Classificação final"...). Se a planilha tiver `LATITUDE`/`LONGITUDE`, elas são usadas direto.
+
+## Privacidade (LGPD)
+
+Por sua escolha, os arquivos gerados **mantêm os dados pessoais** (nome, endereço, idade). Por isso:
+
+- a página web só funciona com senha, não guarda o arquivo enviado e apaga os resultados após 60 minutos;
+- na geocodificação, **só o endereço** (rua, número, bairro, cidade) é enviado ao OpenStreetMap (Nominatim),
+  nunca o nome ou outros dados. O resultado fica em `cache/geocodificacao.json`, que não vai para o Git;
+- não coloque arquivos do SINAN nem a pasta `saida/` no Git (o `.gitignore` já bloqueia);
+- para gerar arquivos sem dados pessoais, use `"incluir_dados_pessoais_nas_saidas": false`.
+
+O serviço público do Nominatim permite no máximo 1 consulta por segundo. Para muitos endereços, rode pela linha
+de comando: o cache faz as próximas execuções serem rápidas. Também é possível apontar `geocodificacao_url`
+para um servidor Nominatim próprio.
+
+## Testes
+
+```bash
+pip install pytest
+python -m pytest tests
+```

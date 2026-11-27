@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% set r = d.resumo %}
+{% set nomes = {'dengue':'Dengue','chikungunya':'Chikungunya','zika':'Zika'} %}
+{% block conteudo %}
+<div class="cartao">
+  <h2>Semana epidemiológica {{ r.semana_epidemiologica }}/{{ r.ano_epidemiologico }}</h2>
+  <p class="dica">Referência {{ r.data_referencia }} · últimas 4 semanas: {{ r.periodo_ultimas_4_semanas.inicio }}
+     a {{ r.periodo_ultimas_4_semanas.fim }} · arquivo {{ r.arquivo_origem }}</p>
+  <div class="numeros">
+    {% for ag, v in r.agravos.items() %}
+    <div class="numero"><b>{{ v.confirmados_ano }}</b><span>{{ nomes[ag] }} confirmados no ano
+      ({{ v.confirmados_ultimas_4_semanas }} nas últimas 4 sem.{% if v.obitos_ano %}, {{ v.obitos_ano }} óbito(s){% endif %})</span></div>
+    {% endfor %}
+    <div class="numero"><b>{{ r.total_alertas }}</b><span>alertas</span></div>
+  </div>
+</div>
+
+<div class="cartao">
+  <h2>Alertas</h2>
+  {% if d.alertas %}
+  <ul class="alertas">
+    {% for a in d.alertas %}
+    <li class="{{ a.nivel }}"><span class="nivel">{{ {'critico':'Crítico','alerta':'Alerta','atencao':'Atenção'}[a.nivel] }}</span><br>{{ a.mensagem }}</li>
+    {% endfor %}
+  </ul>
+  {% else %}<p>Nenhum alerta com os limites configurados.</p>{% endif %}
+</div>
+
+<div class="cartao">
+  <h2>Bairros (últimas 4 semanas)</h2>
+  <div class="tabela"><table>
+    <tr><th>Bairro</th><th>Microárea</th><th>Dengue</th><th>Chik.</th><th>Zika</th><th>Incid. ano/100 mil</th></tr>
+    {% for b in d.bairros[:30] %}
+    <tr><td>{{ b.bairro }}</td><td>{{ b.microarea }}</td>
+      <td class="n">{{ b.dengue.casos_ultimas_4_semanas }}</td><td class="n">{{ b.chikungunya.casos_ultimas_4_semanas }}</td>
+      <td class="n">{{ b.zika.casos_ultimas_4_semanas }}</td>
+      <td class="n">{{ b.incidencia_total_ano_100mil if b.incidencia_total_ano_100mil is not none else '–' }}</td></tr>
+    {% endfor %}
+  </table></div>
+</div>
+
+<div class="cartao">
+  <h2>Qualidade dos dados</h2>
+  <p>{{ r.linhas_lidas }} linhas lidas · {{ r.total_confirmados }} confirmados · {{ r.duplicadas_removidas }} duplicadas removidas.</p>
+  <p>Localização dos confirmados: {{ r.localizacao.coletada }} coletadas em campo, {{ r.localizacao.endereco + r.localizacao.arquivo }} pelo endereço, {{ r.localizacao.rua }} pela rua,
+     {{ r.localizacao.bairro }} pelo centro do bairro, {{ r.localizacao.sem_localizacao }} sem localização.</p>
+  {% if r.bairros_nao_cadastrados %}
+  <p><b>Bairros sem cadastro</b> (inclua no bairros.csv, ou como apelido):
+     {% for b, n in r.bairros_nao_cadastrados.items() %}{{ b }} ({{ n }}){% if not loop.last %}, {% endif %}{% endfor %}</p>
+  {% endif %}
+  {% for a in r.avisos %}<p class="dica">⚠ {{ a }}</p>{% endfor %}
+</div>
+
+<div class="cartao">
+  <h2>Arquivos para o Vigiavetor</h2>
+  <a class="botao" href="{{ url_for('baixar', token=token, nome='vigiavetor_importacao.xlsx') }}">Baixar planilha para importar no Vigiavetor</a>
+  <p><a href="{{ url_for('baixar_zip', token=token) }}">Baixar tudo (.zip)</a></p>
+  <ul class="arquivos">
+    {% for nome, desc in arquivos %}
+    <li><a href="{{ url_for('baixar', token=token, nome=nome) }}">{{ nome }}</a> — {{ desc }}</li>
+    {% endfor %}
+  </ul>
+  <p class="dica">Os arquivos contêm dados pessoais e ficam disponíveis por {{ validade_min }} minutos.</p>
+  <a href="{{ url_for('inicio') }}">Analisar outro arquivo</a>
+</div>
+{% endblock %}

@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% set r = d.resumo %}
+{% block conteudo %}
+<div class="cartao">
+  <h2>Casos confirmados — {{ r.periodo }}</h2>
+  <p class="dica">Planilha de endereços da Secretaria · {{ r.arquivo_origem }}</p>
+  <div class="numeros">
+    <div class="numero"><b>{{ r.total_casos }}</b><span>casos confirmados</span></div>
+    <div class="numero"><b>{{ r.total_dengue }}</b><span>dengue</span></div>
+    <div class="numero"><b>{{ r.total_chikungunya }}</b><span>chikungunya</span></div>
+    {% if r.total_zika %}<div class="numero"><b>{{ r.total_zika }}</b><span>zika</span></div>{% endif %}
+    <div class="numero"><b>{{ r.enderecos_com_2_ou_mais_casos }}</b><span>endereços com 2+ casos</span></div>
+    <div class="numero"><b>{{ r.total_alertas }}</b><span>alertas ({{ r.alertas_por_nivel.critico }} críticos)</span></div>
+  </div>
+</div>
+
+<div class="cartao">
+  <h2>Alertas principais</h2>
+  <ul class="alertas">
+    {% for a in d.alertas[:40] %}
+    <li class="{{ a.nivel }}"><span class="nivel">{{ {'critico':'Crítico','alerta':'Alerta','atencao':'Atenção'}[a.nivel] }}</span><br>{{ a.mensagem }}</li>
+    {% endfor %}
+  </ul>
+  {% if d.alertas|length > 40 %}<p class="dica">Mais {{ d.alertas|length - 40 }} alertas na planilha (aba Alertas).</p>{% endif %}
+</div>
+
+<div class="cartao">
+  <h2>Bairros com mais casos</h2>
+  <div class="tabela"><table>
+    <tr><th>#</th><th>Bairro</th><th>Dengue</th><th>Chik.</th><th>Total</th><th>%</th></tr>
+    {% for b in d.bairros[:20] %}
+    <tr><td class="n">{{ b.ranking }}</td><td>{{ b.bairro }}</td><td class="n">{{ b.dengue }}</td>
+      <td class="n">{{ b.chikungunya }}</td><td class="n">{{ b.total }}</td><td class="n">{{ b.percentual_do_municipio }}</td></tr>
+    {% endfor %}
+  </table></div>
+</div>
+
+<div class="cartao">
+  <h2>Ruas com mais casos</h2>
+  <div class="tabela"><table>
+    <tr><th>Rua</th><th>Bairro</th><th>Casos</th><th>Endereços</th></tr>
+    {% for x in d.ruas[:15] %}
+    <tr><td>{{ x.rua }}</td><td>{{ x.bairro }}</td><td class="n">{{ x.total }}</td><td class="n">{{ x.enderecos_distintos }}</td></tr>
+    {% endfor %}
+  </table></div>
+</div>
+
+<div class="cartao">
+  <h2>Qualidade dos dados</h2>
+  <p>Localização no mapa: {{ r.localizacao.coletada }} coletadas em campo, {{ r.localizacao.endereco }} no número exato, {{ r.localizacao.rua }} na rua, {{ r.localizacao.bairro }} pelo centro do bairro,
+     {{ r.localizacao.sem_localizacao }} sem localização.</p>
+  {% if r.enderecos_a_coletar %}<p><b>{{ r.enderecos_a_coletar }} endereços ainda sem coordenada</b> —
+     baixe <a href="{{ url_for('baixar', token=token, nome='coordenadas_a_coletar.xlsx') }}">coordenadas_a_coletar.xlsx</a>
+     para coletar em campo.</p>{% endif %}
+  {% if r.bairros_nao_cadastrados %}<p><b>Bairros sem cadastro:</b>
+    {% for b, n in r.bairros_nao_cadastrados.items() %}{{ b }} ({{ n }}){% if not loop.last %}, {% endif %}{% endfor %}</p>{% endif %}
+  {% for a in r.avisos %}<p class="dica">⚠ {{ a }}</p>{% endfor %}
+</div>
+
+<div class="cartao">
+  <h2>Arquivos para o Vigiavetor</h2>
+  <a class="botao" href="{{ url_for('baixar', token=token, nome='vigiavetor_importacao.xlsx') }}">Baixar planilha para importar no Vigiavetor</a>
+  <ul class="arquivos">
+    {% for nome, desc in arquivos %}
+    <li><a href="{{ url_for('baixar', token=token, nome=nome) }}">{{ nome }}</a> — {{ desc }}</li>
+    {% endfor %}
+    <li><a href="{{ url_for('baixar_zip', token=token) }}">Tudo em .zip</a></li>
+  </ul>
+  <p class="dica">Os arquivos ficam disponíveis por {{ validade_min }} minutos.</p>
+  <a href="{{ url_for('inicio') }}">Analisar outro arquivo</a>
+</div>
+{% endblock %}

@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Analisador de Arboviroses</title>
+  <style>
+    :root { --fundo:#f5f7f6; --cartao:#fff; --texto:#1d2a26; --suave:#5b6b66; --borda:#d9e1de;
+            --primaria:#0b7a5a; --critico:#b3261e; --alerta:#c25e00; --atencao:#8a6d00; }
+    @media (prefers-color-scheme: dark) {
+      :root { --fundo:#121816; --cartao:#1c2421; --texto:#e6eeeb; --suave:#9fb0aa; --borda:#2e3a36;
+              --primaria:#3cc79a; --critico:#ff8a80; --alerta:#ffb366; --atencao:#e8cf5a; }
+    }
+    * { box-sizing: border-box; }
+    body { margin:0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+           background:var(--fundo); color:var(--texto); line-height:1.45; }
+    header { background:var(--primaria); color:#fff; padding:12px 16px; display:flex;
+             justify-content:space-between; align-items:center; }
+    header a { color:#fff; }
+    main { max-width:820px; margin:0 auto; padding:16px; }
+    .cartao { background:var(--cartao); border:1px solid var(--borda); border-radius:10px;
+              padding:16px; margin-bottom:16px; }
+    h1 { font-size:1.15rem; margin:0; } h2 { font-size:1.05rem; margin:0 0 10px; }
+    label { display:block; font-weight:600; margin:12px 0 4px; }
+    input[type=file], input[type=date], input[type=password], select { width:100%; padding:10px;
+           border:1px solid var(--borda); border-radius:8px; background:var(--fundo); color:var(--texto); font-size:1rem; }
+    .dica { color:var(--suave); font-size:.88rem; margin:4px 0 0; }
+    button, .botao { display:inline-block; background:var(--primaria); color:#fff; border:0;
+           border-radius:8px; padding:12px 18px; font-size:1rem; font-weight:600; text-decoration:none;
+           margin-top:16px; cursor:pointer; }
+    .msg { background:#fdecea; color:#5f1410; padding:10px 12px; border-radius:8px; margin-bottom:12px; }
+    .numeros { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; }
+    .numero { border:1px solid var(--borda); border-radius:8px; padding:10px; }
+    .numero b { display:block; font-size:1.5rem; font-variant-numeric: tabular-nums; }
+    .numero span { color:var(--suave); font-size:.85rem; }
+    ul.alertas { list-style:none; padding:0; margin:0; }
+    ul.alertas li { padding:8px 0 8px 12px; border-left:4px solid var(--borda); margin-bottom:8px; }
+    li.critico { border-color:var(--critico) !important; } li.alerta { border-color:var(--alerta) !important; }
+    li.atencao { border-color:var(--atencao) !important; }
+    .nivel { font-size:.75rem; font-weight:700; text-transform:uppercase; }
+    .critico .nivel { color:var(--critico); } .alerta .nivel { color:var(--alerta); } .atencao .nivel { color:var(--atencao); }
+    .tabela { overflow-x:auto; }
+    table { border-collapse:collapse; width:100%; font-size:.9rem; }
+    th, td { text-align:left; padding:6px 8px; border-bottom:1px solid var(--borda); white-space:nowrap; }
+    td.n { text-align:right; font-variant-numeric: tabular-nums; }
+    ul.arquivos { padding-left:18px; } ul.arquivos li { margin:6px 0; }
+    a { color:var(--primaria); }
+  </style>
+</head>
+<body>
+<header>
+  <h1>Analisador de Arboviroses</h1>
+  {% if session.get('ok') %}<a href="{{ url_for('sair') }}">Sair</a>{% endif %}
+</header>
+<main>
+  {% with mensagens = get_flashed_messages() %}
+    {% for m in mensagens %}<div class="msg">{{ m }}</div>{% endfor %}
+  {% endwith %}
+  {% block conteudo %}{% endblock %}
+</main>
+</body>
+</html>
