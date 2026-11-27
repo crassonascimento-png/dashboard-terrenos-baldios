@@ -42,6 +42,13 @@ ALIASES = {
     "criterio": ["CRITERIO", "CRITERIO_CONFIRMACAO", "CRITERIO_DE_CONFIRMACAO"],
     "evolucao": ["EVOLUCAO", "EVOLUCAO_CASO", "EVOLUCAO_DO_CASO"],
     "data_obito": ["DT_OBITO", "DATA_OBITO"],
+    "cns": ["ID_CNS_SUS", "CNS", "CNS_DO_PACIENTE", "CARTAO_SUS"],
+    "nome_mae": ["NM_MAE_PAC", "NOME_MAE", "NOME_DA_MAE"],
+    "telefone": ["NU_TELEFON", "TELEFONE", "TELEFONE_DE_CONTATO"],
+    "ddd": ["ID_DDD", "NU_DDD_TEL", "DDD"],
+    "unidade": ["ID_UNIDADE", "UNIDADE_SOLICITANTE", "UNIDADE_NOTIFICADORA", "UNIDADE"],
+    "exame": ["EXAME"],
+    "resultado": ["RESULTADO"],
     "latitude": ["LATITUDE", "LAT", "ID_GEO1", "COORD_Y"],
     "longitude": ["LONGITUDE", "LON", "LNG", "LONG", "ID_GEO2", "COORD_X"],
 }

@@ -10,6 +10,9 @@
 
   "incluir_em_investigacao": false,
   "incluir_dados_pessoais_nas_saidas": true,
+  "modelo_vigiavetor_resultado": "Positivo",
+  "modelo_vigiavetor_exame": { "dengue": "Dengue", "chikungunya": "Chikungunya", "zika": "Zika" },
+  "modelo_vigiavetor_usar_centro_do_bairro": false,
   "classificacao_confirmada": {
     "dengue": ["10", "11", "12"],
     "chikungunya": ["13"],

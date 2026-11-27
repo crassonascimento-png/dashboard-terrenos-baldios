@@ -56,7 +56,7 @@
 
 <div class="cartao">
   <h2>Arquivos para o Vigiavetor</h2>
-  <a class="botao" href="{{ url_for('baixar', token=token, nome='vigiavetor.xlsx') }}">Baixar planilha Excel</a>
+  <a class="botao" href="{{ url_for('baixar', token=token, nome='vigiavetor_importacao.xlsx') }}">Baixar planilha para importar no Vigiavetor</a>
   <ul class="arquivos">
     {% for nome, desc in arquivos %}
     <li><a href="{{ url_for('baixar', token=token, nome=nome) }}">{{ nome }}</a> — {{ desc }}</li>

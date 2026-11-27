@@ -272,3 +272,41 @@ def test_conjunto_zona_de_expansao(tmp_path):
     assert mosq["incidencia_grupo_100mil"] == round(60 * 100000 / 32219, 1)
     al = [a for a in r["alertas"] if a["tipo"].startswith("bairro")]
     assert len(al) == 1 and al[0]["bairro"] == "Zona de Expansão" and "Mosqueiro 30" in al[0]["mensagem"]
+
+
+MODELO = ["Unidade Solicitante", "Data da solicitação", "Data do 1º sintoma", "CNS do Paciente", "Paciente",
+          "Data de nascimento", "Idade", "Sexo", "Nome da mãe", "Endereço", "Número", "Bairro",
+          "CEP de residência", "Telefone de contato", "Exame", "Data da coleta", "Resultado", "Latitude", "Longitude"]
+
+
+def test_modelo_importacao_sinan(tmp_path):
+    from openpyxl import load_workbook
+    cab = "NU_NOTIFIC;ID_AGRAVO;DT_NOTIFIC;DT_SIN_PRI;NM_PACIENT;DT_NASC;NU_IDADE_N;CS_SEXO;NM_MAE_PAC;ID_CNS_SUS;" \
+          "NM_BAIRRO;NM_LOGRADO;NU_NUMERO;NU_CEP;ID_DDD;NU_TELEFON;DT_NS1;CLASSI_FIN;ID_MN_RESI;LATITUDE;LONGITUDE\n"
+    linhas = ["1;A90;01/09/2026;25/08/2026;MARIA FICTICIA;14/05/1990;4036;F;JOANA FICTICIA;700000000000000;"
+              "CENTRO;RUA DAS FLORES;123;49000000;79;999999999;01/09/2026;10;280030;-10.91;-37.05",
+              "2;A90;01/09/2026;25/08/2026;DESCARTADO;14/05/1990;4036;M;;;CENTRO;RUA X;1;;;;;5;280030;;"]
+    r = executar((cab + "\n".join(linhas)).encode(), "s.csv", str(tmp_path), config=carregar_config(),
+                 geocodificar_enderecos=False)
+    ws = load_workbook(tmp_path / "vigiavetor_importacao.xlsx")["Notificações"]
+    assert [c.value for c in ws[1]] == MODELO
+    assert ws.max_row == 2  # só o confirmado
+    v = dict(zip(MODELO, [c.value for c in ws[2]]))
+    assert v["Data da solicitação"] == "2026-09-01" and v["Data do 1º sintoma"] == "2026-08-25"
+    assert v["Paciente"] == "MARIA FICTICIA" and v["Idade"] == "36" and v["Sexo"] == "Feminino"
+    assert v["CEP de residência"] == "49000-000" and v["Telefone de contato"] == "(79) 999999999"
+    assert v["Exame"] == "Dengue" and v["Resultado"] == "Positivo" and v["Data da coleta"] == "2026-09-01"
+    assert v["Latitude"] == -10.91 and v["Longitude"] == -37.05
+
+
+def test_modelo_importacao_secretaria(tmp_path):
+    from openpyxl import load_workbook
+    executar(_planilha_secretaria(), "enderecos.xlsx", str(tmp_path), config=carregar_config(),
+             geocodificar_enderecos=False)
+    ws = load_workbook(tmp_path / "vigiavetor_importacao.xlsx")["Notificações"]
+    assert [c.value for c in ws[1]] == MODELO
+    assert ws.max_row == 10
+    v = dict(zip(MODELO, [c.value for c in ws[2]]))
+    assert (v["Endereço"], v["Número"], v["Bairro"], v["Exame"], v["Resultado"]) == \
+        ("RUA JOSIAS VIEIRA DANTAS", "328", "Coroa do Meio", "Dengue", "Positivo")
+    assert v["Latitude"] is None  # sem localização: fica em branco

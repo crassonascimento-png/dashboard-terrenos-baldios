@@ -19,6 +19,7 @@ from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Alignment, Font, PatternFill
 from openpyxl.utils import get_column_letter
 
+from . import modelo_vigiavetor
 from .analise import associar_bairros, geocodificar
 from .util import distancia_m, normalizar_texto
 
@@ -477,6 +478,16 @@ def executar(conteudo, pasta_saida, config, cadastro, geocodificador, gravar_jso
     })
     os.makedirs(pasta_saida, exist_ok=True)
     gravar_excel(os.path.join(pasta_saida, "vigiavetor.xlsx"), r, casos)
+    linhas_modelo = []
+    for c in casos:
+        lat, lon = modelo_vigiavetor.coordenadas(c, config)
+        linhas_modelo.append({
+            "Endereço": c["logradouro_original"], "Número": c["numero_original"], "Bairro": c["vv_bairro"],
+            "Exame": modelo_vigiavetor.exame(c["vv_agravo"], config),
+            "Resultado": config.get("modelo_vigiavetor_resultado", "Positivo"),
+            "Latitude": lat, "Longitude": lon,
+        })
+    modelo_vigiavetor.gravar(os.path.join(pasta_saida, "vigiavetor_importacao.xlsx"), linhas_modelo)
     pacote = {"versao_formato": 1, **r}
     gravar_json(os.path.join(pasta_saida, "vigiavetor.json"), pacote)
     gravar_json(os.path.join(pasta_saida, "resumo.json"), r["resumo"])

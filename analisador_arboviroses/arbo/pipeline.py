@@ -7,7 +7,7 @@ import os
 from datetime import date, datetime
 
 from .analise import AGRAVOS, analisar, associar_bairros, geocodificar
-from . import secretaria
+from . import modelo_vigiavetor, secretaria
 from .excel import gravar_excel
 from .geocodificacao import Geocodificador
 from .leitura import ler_arquivo, ler_bairros, mapear_colunas, preparar_casos
@@ -107,6 +107,54 @@ def _bairros_planos(bairros):
     return linhas
 
 
+COLUNAS_COLETA = ["DT_NS1", "DT_SORO", "DT_PCR", "DT_CHIK_S1", "DT_CHIK_S2", "DT_PRNT", "DT_COLETA",
+                  "DATA_COLETA", "DATA_DA_COLETA"]
+
+
+def _gravar_modelo(caminho, casos, colunas, config):
+    """Casos confirmados no modelo de importação do Vigiavetor."""
+    from .util import normalizar_coluna, parse_data
+
+    def col(c, nome):
+        return c.get(colunas[nome], "") if nome in colunas else ""
+
+    def data(valor):
+        d = parse_data(valor)
+        return d.isoformat() if d else None
+
+    linhas = []
+    for c in casos:
+        if not c["vv_confirmado"]:
+            continue
+        norm = {normalizar_coluna(k): k for k in c if isinstance(k, str)}
+        coleta = next((c[norm[k]] for k in COLUNAS_COLETA if k in norm and parse_data(c[norm[k]])), "")
+        tel = str(col(c, "telefone") or "").strip()
+        ddd = str(col(c, "ddd") or "").strip()
+        lat, lon = modelo_vigiavetor.coordenadas(c, config)
+        cep = str(c.get("vv_cep") or "")
+        linhas.append({
+            "Unidade Solicitante": col(c, "unidade"),
+            "Data da solicitação": data(col(c, "data_notificacao")),
+            "Data do 1º sintoma": data(col(c, "data_sintomas")),
+            "CNS do Paciente": col(c, "cns"),
+            "Paciente": col(c, "nome"),
+            "Data de nascimento": data(col(c, "data_nascimento")),
+            "Idade": c.get("vv_idade_anos"),
+            "Sexo": c["vv_sexo"] if c["vv_sexo"] != "Ignorado" else None,
+            "Nome da mãe": col(c, "nome_mae"),
+            "Endereço": col(c, "logradouro"),
+            "Número": col(c, "numero"),
+            "Bairro": c["vv_bairro"],
+            "CEP de residência": f"{cep[:5]}-{cep[5:]}" if len(cep) == 8 and cep.isdigit() else cep,
+            "Telefone de contato": f"({ddd}) {tel}" if ddd and tel else tel,
+            "Exame": col(c, "exame") or modelo_vigiavetor.exame(c["vv_agravo"], config),
+            "Data da coleta": data(coleta),
+            "Resultado": col(c, "resultado") or config.get("modelo_vigiavetor_resultado", "Positivo"),
+            "Latitude": lat, "Longitude": lon,
+        })
+    modelo_vigiavetor.gravar(caminho, linhas)
+
+
 def executar(conteudo, nome_arquivo, pasta_saida, config=None, agravo_padrao=None,
              bairros_conteudo=None, data_referencia=None, geocodificar_enderecos=None,
              geocodificador=None, progresso=None):
@@ -202,6 +250,8 @@ def executar(conteudo, nome_arquivo, pasta_saida, config=None, agravo_padrao=Non
                  "latitude", "longitude"])
     _gravar_json(os.path.join(pasta_saida, "mapa_casos.geojson"), resultado["mapa_casos"])
     _gravar_json(os.path.join(pasta_saida, "mapa_bairros.geojson"), resultado["mapa_bairros"])
+
+    _gravar_modelo(os.path.join(pasta_saida, "vigiavetor_importacao.xlsx"), casos, colunas, config)
 
     pacote = {"versao_formato": 1, **resultado}
     _gravar_json(os.path.join(pasta_saida, "vigiavetor.json"), pacote)

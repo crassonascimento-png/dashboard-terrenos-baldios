@@ -9,6 +9,32 @@ Esta pasta é independente do app de terrenos baldios e não altera nenhum arqui
 **Já configurado para Aracaju-SE** (código IBGE 2800308; o SINAN usa `280030`). O resultado principal é a
 planilha **`vigiavetor.xlsx`**, para alimentar o Vigiavetor.
 
+## Arquivo para importar no Vigiavetor: `vigiavetor_importacao.xlsx`
+
+Segue exatamente o modelo `modelo_importacao_arboviroses.xlsx` do Vigiavetor: aba **Notificações**, 19 colunas
+na mesma ordem, datas como `AAAA-MM-DD`, uma linha por caso confirmado.
+
+| Coluna do Vigiavetor | Exportação do SINAN | Planilha de endereços da Secretaria |
+|---|---|---|
+| Unidade Solicitante | `ID_UNIDADE` | — |
+| Data da solicitação | `DT_NOTIFIC` | — |
+| Data do 1º sintoma | `DT_SIN_PRI` | — |
+| CNS do Paciente | `ID_CNS_SUS` | — |
+| Paciente | `NM_PACIENT` | — |
+| Data de nascimento / Idade / Sexo | `DT_NASC` / `NU_IDADE_N` / `CS_SEXO` | — |
+| Nome da mãe | `NM_MAE_PAC` | — |
+| Endereço / Número / Bairro | `NM_LOGRADO` / `NU_NUMERO` / `NM_BAIRRO` (padronizado) | colunas da planilha (bairro padronizado) |
+| CEP / Telefone | `NU_CEP` / `ID_DDD` + `NU_TELEFON` | — |
+| Exame | doença (`Dengue`, `Chikungunya`, `Zika`) | doença da aba |
+| Data da coleta | `DT_NS1`, `DT_SORO`, `DT_PCR`... (a primeira preenchida) | — |
+| Resultado | `Positivo` | `Positivo` |
+| Latitude / Longitude | geocodificação | geocodificação |
+
+- Latitude/longitude ficam **em branco** quando o caso só pôde ser posicionado no centro do bairro, para não
+  criar pontos empilhados falsos no mapa. Para preencher assim mesmo, use
+  `"modelo_vigiavetor_usar_centro_do_bairro": true`.
+- Os textos de `Exame` e `Resultado` podem ser trocados em `modelo_vigiavetor_exame` e `modelo_vigiavetor_resultado`.
+
 ## Bairros e população
 
 O `bairros.csv` traz os bairros de Aracaju, com a **população estimada de 2019** do *Anuário Estatístico de
