@@ -86,6 +86,8 @@ class Geocodificador:
             ponto = (lat, lon)
             break
         self.cache[chave] = list(ponto) if ponto else None
+        if self.consultas % 50 == 0:
+            self.salvar_cache()  # guarda o progresso em execuções longas
         return ponto
 
     def chave_endereco(self, endereco, bairro):

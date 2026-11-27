@@ -254,3 +254,21 @@ def test_web_planilha_secretaria(monkeypatch):
     assert "Ruas com mais casos" in pagina and "JOSIAS" in pagina
     assert cli.get(resp.headers["Location"] + "/ruas.csv").status_code == 200
     assert cli.get(resp.headers["Location"] + "/microareas.csv").status_code == 404
+
+
+def test_conjunto_zona_de_expansao(tmp_path):
+    from openpyxl import Workbook
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "CONFIRMADOS DENGUE"
+    ws.append(["ENDEREÇOS DOS CASOS CONFIRMADOS - AGOSTO A 23 DE OUTUBRO 2026"])
+    for i in range(60):
+        ws.append(["MOSQUEIRO" if i % 2 else "ROBALO", f"RUA {i}", str(i), None])
+    buf = io.BytesIO()
+    wb.save(buf)
+    r = executar(buf.getvalue(), "e.xlsx", str(tmp_path), config=carregar_config(), geocodificar_enderecos=False)
+    mosq = next(b for b in r["bairros"] if b["bairro"] == "Mosqueiro")
+    assert mosq["grupo_populacao"] == "Zona de Expansão"
+    assert mosq["incidencia_grupo_100mil"] == round(60 * 100000 / 32219, 1)
+    al = [a for a in r["alertas"] if a["tipo"].startswith("bairro")]
+    assert len(al) == 1 and al[0]["bairro"] == "Zona de Expansão" and "Mosqueiro 30" in al[0]["mensagem"]

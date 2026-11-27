@@ -9,20 +9,35 @@ Esta pasta é independente do app de terrenos baldios e não altera nenhum arqui
 **Já configurado para Aracaju-SE** (código IBGE 2800308; o SINAN usa `280030`). O resultado principal é a
 planilha **`vigiavetor.xlsx`**, para alimentar o Vigiavetor.
 
-## O que ainda falta preencher: população dos bairros
+## Bairros e população
 
-O `bairros.csv` já traz os bairros de Aracaju e as grafias comuns no SINAN (ex.: `18 DO FORTE`,
-`CONJ AUGUSTO FRANCO` → Farolândia, `MOSQUEIRO`/`ARUANA` → Zona de Expansão). A coluna **`populacao`
-está vazia**. Sem ela, tudo funciona, menos a incidência por 100 mil habitantes e os alertas de incidência.
+O `bairros.csv` traz os bairros de Aracaju, com a **população estimada de 2019** do *Anuário Estatístico de
+Aracaju 2023* (Quadro 2.2.6, fonte IBGE: Censo 2010 e PNAD Contínua). Ele também traz as grafias usadas pela
+Secretaria e pelo SINAN (`18 DO FORTE`, `CONJ AUGUSTO FRANCO` → Farolândia, `AERPORTO` → Aeroporto...).
 
-Onde encontrar a população por bairro:
-- **Anuário Estatístico de Aracaju**, no Portal da Transparência da Prefeitura (tem tabela por bairro);
-- **IBGE / Censo 2022**, agregados por bairro (SIDRA) ou pela Secretaria Municipal de Saúde/Vigilância.
+- **Mosqueiro, Robalo, Areia Branca e Gameleira** aparecem separados no mapa e nas ruas, mas a coluna `grupo`
+  os soma à **Zona de Expansão** para calcular a incidência, porque a população oficial é a do conjunto.
+- **Marivan, Dom Luciano e 17 de Março** não têm população no Anuário (17 de Março aparece com 0, pois foi
+  criado depois de 2010). Neles, o nível é calculado pelo número de casos. Se conseguir a população,
+  é só preencher.
+- `latitude`/`longitude` podem ficar vazias: o centro de cada bairro é buscado no OpenStreetMap e guardado em cache.
 
-Basta abrir o `bairros.csv` (no Excel ou em qualquer editor) e preencher a coluna. As colunas
-`latitude`/`longitude` podem ficar vazias: o analisador busca o centro de cada bairro no OpenStreetMap
-na primeira execução e guarda em cache. Esses centros aparecem na aba *Bairros* da planilha gerada;
-copie-os para o `bairros.csv` se quiser fixá-los.
+## Planilha de endereços da Secretaria
+
+A planilha *"ENDEREÇOS DOS CASOS CONFIRMADOS ..."* (uma aba por doença: bairro, rua, número e complemento)
+é reconhecida automaticamente. Como ela não tem datas, a análise é **espacial**:
+
+| Aba do Excel | Conteúdo |
+|---|---|
+| Resumo | Período, totais por doença, qualidade da localização |
+| Alertas | Bairros com mais casos ou incidência alta, ruas com 5 ou mais casos, endereços com 3 ou mais casos, dengue e chikungunya na mesma rua (5 ou mais casos), aglomerados de 5 ou mais casos a até 200 m |
+| Bairros | Ranking, casos por doença, % do município, incidência |
+| Ruas | Casos por rua (abreviações padronizadas: AV → AVENIDA, R → RUA...) |
+| Enderecos_Repetidos | Endereços com 2 ou mais casos (prédios, condomínios, casas com mais de um doente) |
+| Mapa_Casos | Latitude/longitude de cada caso (precisão: endereço, rua ou centro do bairro) |
+| Casos | Todas as linhas, com a aba e a linha de origem |
+
+Os limites ficam em `config.json` → `alertas_enderecos`.
 
 ## Duas formas de usar
 

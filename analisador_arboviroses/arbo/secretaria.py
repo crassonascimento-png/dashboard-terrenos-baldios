@@ -183,14 +183,47 @@ def analisar(casos, cadastro, config, info):
             "ruas_com_casos": len({c["vv_logradouro_norm"] for c in lista if c["vv_logradouro_norm"]}),
             "enderecos_com_2_ou_mais_casos": sum(1 for n in enderecos.values() if n >= 2),
         }
+        b["grupo_populacao"] = reg.get("grupo") or ""
         if pop:
             b["nivel"] = _nivel(b["incidencia_100mil"], lim["bairro_incidencia_100mil"]) or "baixo"
         else:
             b["nivel"] = _nivel(len(lista), lim["bairro_casos"]) or "baixo"
         bairros.append(b)
     bairros.sort(key=lambda b: (-b["total"], b["bairro"]))
+
+    # Localidades que, na estatística oficial, fazem parte de outro bairro (ex.: Mosqueiro,
+    # Robalo e Areia Branca na Zona de Expansão): a incidência é calculada para o conjunto.
+    conjuntos = defaultdict(list)
+    for b in bairros:
+        if b["grupo_populacao"]:
+            conjuntos[b["grupo_populacao"]].append(b)
+    for grupo, membros in conjuntos.items():
+        reg_g = cadastro.get(normalizar_texto(grupo)) or {}
+        pop_g = reg_g.get("populacao")
+        principal = next((b for b in bairros if normalizar_texto(b["bairro"]) == normalizar_texto(grupo)), None)
+        todos = membros + ([principal] if principal and principal not in membros else [])
+        tot = sum(b["total"] for b in todos)
+        inc = _incidencia(tot, pop_g)
+        nivel = (_nivel(inc, lim["bairro_incidencia_100mil"]) if pop_g else _nivel(tot, lim["bairro_casos"])) or "baixo"
+        for b in todos:
+            b["grupo_populacao"] = grupo
+            b["incidencia_grupo_100mil"] = inc
+            b["nivel"] = nivel
+            b["_no_grupo"] = True
+        nomes = ", ".join(f"{b['bairro']} {b['total']}" for b in sorted(todos, key=lambda x: -x["total"]))
+        if nivel in NIVEL:
+            dengue = sum(b["dengue"] for b in todos)
+            chik = sum(b["chikungunya"] for b in todos)
+            msg = (f"{grupo} ({nomes}): {tot} casos ({dengue} dengue, {chik} chikungunya)"
+                   + (f", incidência {inc:g}/100 mil hab." if inc is not None else "."))
+            alerta("bairro_incidencia" if inc is not None else "bairro_casos", nivel, "todas", grupo, msg,
+                   inc if inc is not None else tot,
+                   lim["bairro_incidencia_100mil" if inc is not None else "bairro_casos"][nivel])
+
     for pos, b in enumerate(bairros, start=1):
         b["ranking"] = pos
+        if b.pop("_no_grupo", False):
+            continue
         if b["nivel"] in NIVEL:
             if b["incidencia_100mil"] is not None:
                 msg = (f"{b['bairro']}: {b['total']} casos ({b['dengue']} dengue, {b['chikungunya']} chikungunya), "
@@ -397,10 +430,12 @@ def gravar_excel(caminho, r, casos):
         ws.cell(i, 1).fill = PatternFill("solid", fgColor=COR[a["nivel"]])
 
     _aba(wb, "Bairros", ["Ranking", "Bairro", "Dengue", "Chikungunya", "Zika", "Total", "% do município",
-                         "População", "Incidência/100 mil", "Nível", "Ruas com casos", "Endereços c/ 2+ casos",
+                         "População", "Incidência/100 mil", "Faz parte de", "Incidência do conjunto/100 mil",
+                         "Nível", "Ruas com casos", "Endereços c/ 2+ casos",
                          "Latitude", "Longitude", "Cadastrado"],
          [(b["ranking"], b["bairro"], b["dengue"], b["chikungunya"], b["zika"], b["total"],
-           b["percentual_do_municipio"], b["populacao"], b["incidencia_100mil"], b["nivel"], b["ruas_com_casos"],
+           b["percentual_do_municipio"], b["populacao"], b["incidencia_100mil"], b["grupo_populacao"],
+           b.get("incidencia_grupo_100mil"), b["nivel"], b["ruas_com_casos"],
            b["enderecos_com_2_ou_mais_casos"], b["latitude"], b["longitude"], b["cadastrado"]) for b in r["bairros"]])
 
     _aba(wb, "Ruas", ["Bairro", "Rua", "Dengue", "Chikungunya", "Zika", "Total", "Endereços distintos", "Números"],

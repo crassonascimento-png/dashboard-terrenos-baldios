@@ -353,6 +353,7 @@ def ler_bairros(caminho_ou_bytes, nome="bairros.csv"):
             "bairro": nome_bairro,
             "microarea": pega(linha, "MICROAREA", "MICRO_AREA"),
             "populacao": int(populacao) if populacao else None,
+            "grupo": pega(linha, "GRUPO", "GRUPO_POPULACAO"),
             "latitude": parse_float(pega(linha, "LATITUDE", "LAT")),
             "longitude": parse_float(pega(linha, "LONGITUDE", "LON", "LNG")),
         }
