@@ -1,8 +1,11 @@
 {
-  "_comentario": "Ajuste município, UF e código IBGE (6 dígitos) da sua cidade. Campos iniciados por _ são ignorados.",
-  "municipio": "Sua Cidade",
-  "uf": "UF",
-  "codigo_municipio_residencia": "",
+  "_comentario": "Configurado para Aracaju-SE (IBGE 2800308; o SINAN usa os 6 primeiros dígitos). Campos iniciados por _ são ignorados.",
+  "municipio": "Aracaju",
+  "uf": "SE",
+  "codigo_municipio_residencia": "280030",
+  "centro_municipio_latitude": -10.95,
+  "centro_municipio_longitude": -37.07,
+  "raio_municipio_km": 25,
   "arquivo_bairros": "bairros.csv",
 
   "incluir_em_investigacao": false,

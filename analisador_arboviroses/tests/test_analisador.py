@@ -14,6 +14,8 @@ from arbo.util import parse_data, semana_epidemiologica  # noqa: E402
 
 PASTA = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 EXEMPLO = os.path.join(PASTA, "exemplos", "sinan_exemplo_ficticio.csv")
+with open(os.path.join(PASTA, "exemplos", "bairros_exemplo_ficticio.csv"), "rb") as _f:
+    BAIRROS_EXEMPLO = _f.read()
 
 
 @pytest.mark.parametrize("d, esperado", [
@@ -67,22 +69,37 @@ def test_leitura_csv_latin1_ponto_virgula():
 def test_exemplo_completo(tmp_path):
     with open(EXEMPLO, "rb") as f:
         r = executar(f.read(), EXEMPLO, str(tmp_path), config=carregar_config(),
-                     geocodificar_enderecos=False)
+                     bairros_conteudo=BAIRROS_EXEMPLO, geocodificar_enderecos=False)
     res = r["resumo"]
     assert res["semana_epidemiologica"] == 46
     assert res["total_confirmados"] > 0
-    assert "PARQUE DAS AGUAS" in res["bairros_nao_cadastrados"]
-    vila = next(b for b in r["bairros"] if b["bairro"] == "Vila Nova")  # casou pelo apelido "VL NOVA"
-    assert vila["dengue"]["casos_ultimas_4_semanas"] > 0
-    assert any(a["tipo"] == "incidencia_alta" and a["bairro"] == "Vila Nova" for a in r["alertas"])
-    for nome in ("vigiavetor.json", "alertas.csv", "bairros.csv", "mapa_casos.geojson", "casos_processados.csv"):
+    assert "BAIRRO FICTICIO" in res["bairros_nao_cadastrados"]
+    assert any("outros municípios" in a for a in res["avisos"])  # filtro IBGE 280030
+    forte = next(b for b in r["bairros"] if b["bairro"] == "Dezoito do Forte")  # apelido "18 DO FORTE"
+    assert forte["total_casos_ano"] > 0
+    assert any(a["tipo"] == "incidencia_alta" and a["bairro"] == "Santa Maria" for a in r["alertas"])
+    for nome in ("vigiavetor.xlsx", "vigiavetor.json", "alertas.csv", "bairros.csv", "mapa_casos.geojson",
+                 "casos_processados.csv"):
         assert (tmp_path / nome).exists()
     mapa = json.loads((tmp_path / "mapa_casos.geojson").read_text(encoding="utf-8"))
     assert mapa["features"] and mapa["features"][0]["geometry"]["type"] == "Point"
     # todas as colunas originais continuam no CSV processado
     cab = (tmp_path / "casos_processados.csv").read_text(encoding="utf-8-sig").splitlines()[0]
     assert "NM_PACIENT" in cab and "vv_confirmado" in cab
+    from openpyxl import load_workbook
+    wb = load_workbook(tmp_path / "vigiavetor.xlsx")
+    assert wb.sheetnames == ["Resumo", "Alertas", "Bairros", "Microareas", "Semanas", "Mapa_Casos",
+                             "Casos_Confirmados"]
+    assert wb["Alertas"].max_row == len(r["alertas"]) + 1
+    assert wb["Casos_Confirmados"]["A2"].value == wb["Casos_Confirmados"]["A2"].value.zfill(7)  # zeros mantidos
 
+
+def test_bairros_reais_de_aracaju():
+    from arbo.leitura import ler_bairros
+    cad = ler_bairros(os.path.join(PASTA, "bairros.csv"))
+    assert cad["18 DO FORTE"]["bairro"] == "Dezoito do Forte"
+    assert cad["AUGUSTO FRANCO"]["bairro"] == "Farolândia"
+    assert cad["MOSQUEIRO"]["bairro"] == "Zona de Expansão"
 
 class GeoFalso:
     """Substitui o Nominatim: devolve coordenadas fixas por logradouro."""
@@ -94,6 +111,10 @@ class GeoFalso:
     def localizar(self, endereco, bairro, referencia=None):
         self.consultas += 1
         return self.pontos.get(endereco.split(",")[0])
+
+    def localizar_bairro(self, bairro):
+        self.consultas += 1
+        return (-10.9, -37.05)
 
     def salvar_cache(self):
         pass
@@ -117,6 +138,8 @@ def test_aglomerado_e_obito(tmp_path):
                     "RUA C": (-10.001, -48.0), "RUA LONGE": (-10.05, -48.05)})
     r = executar(_csv(linhas), "t.csv", str(tmp_path), config=carregar_config(),
                  geocodificar_enderecos=True, geocodificador=geo)
+    centro = next(b for b in r["bairros"] if b["bairro"] == "Centro")
+    assert (centro["latitude"], centro["longitude"]) == (-10.9, -37.05)  # buscado no mapa
     res = r["resumo"]
     assert res["duplicadas_removidas"] == 1
     assert res["total_confirmados"] == 4
@@ -141,7 +164,8 @@ def test_sem_dados_pessoais(tmp_path):
     cfg = carregar_config()
     cfg["incluir_dados_pessoais_nas_saidas"] = False
     with open(EXEMPLO, "rb") as f:
-        r = executar(f.read(), EXEMPLO, str(tmp_path), config=cfg, geocodificar_enderecos=False)
+        r = executar(f.read(), EXEMPLO, str(tmp_path), config=cfg, bairros_conteudo=BAIRROS_EXEMPLO,
+                     geocodificar_enderecos=False)
     assert "nome" not in r["mapa_casos"]["features"][0]["properties"]
     cab = (tmp_path / "casos_processados.csv").read_text(encoding="utf-8-sig").splitlines()[0]
     assert "NM_PACIENT" not in cab and "NM_LOGRADO" not in cab
@@ -157,11 +181,13 @@ def test_web(monkeypatch):
     assert cli.post("/login", data={"senha": "errada"}).status_code == 200
     cli.post("/login", data={"senha": "teste123"})
     with open(EXEMPLO, "rb") as f:
-        resp = cli.post("/", data={"arquivo": (io.BytesIO(f.read()), "sinan.csv")},
+        resp = cli.post("/", data={"arquivo": (io.BytesIO(f.read()), "sinan.csv"),
+                                   "bairros": (io.BytesIO(BAIRROS_EXEMPLO), "bairros.csv")},
                         content_type="multipart/form-data")
     assert resp.status_code == 302
     pagina = cli.get(resp.headers["Location"])
-    assert pagina.status_code == 200 and "Vila Nova" in pagina.get_data(as_text=True)
+    assert pagina.status_code == 200 and "Santa Maria" in pagina.get_data(as_text=True)
+    assert cli.get(resp.headers["Location"] + "/vigiavetor.xlsx").status_code == 200
     zip_resp = cli.get(resp.headers["Location"] + ".zip")
     assert zip_resp.status_code == 200 and zip_resp.data[:2] == b"PK"
     # outro usuário (sem a sessão) não acessa o resultado

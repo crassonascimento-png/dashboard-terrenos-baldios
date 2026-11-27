@@ -20,6 +20,7 @@ class Geocodificador:
         self.url = config.get("geocodificacao_url", "https://nominatim.openstreetmap.org/search")
         self.intervalo = float(config.get("geocodificacao_intervalo_segundos", 1.1))
         self.raio_max_m = float(config.get("geocodificacao_raio_max_km", 5)) * 1000
+        self.raio_municipio_m = float(config.get("raio_municipio_km", 25)) * 1000
         self.caminho_cache = caminho_cache
         self.sessao = sessao or requests.Session()
         self.sessao.headers.setdefault(
@@ -53,23 +54,21 @@ class Geocodificador:
         resp.raise_for_status()
         return resp.json()
 
-    def localizar(self, endereco, bairro, referencia=None):
-        """Retorna (lat, lon) ou None.
+    def _referencia_municipio(self):
+        lat = self.config.get("centro_municipio_latitude")
+        lon = self.config.get("centro_municipio_longitude")
+        return (float(lat), float(lon)) if lat is not None and lon is not None else None
 
-        ``referencia`` = (lat, lon) do centro do bairro; resultados longe demais
-        dele são descartados (evita cair em rua homônima de outra cidade).
-        """
-        if not endereco:
-            return None
+    def _cidade(self):
         municipio = self.config.get("municipio", "")
         uf = self.config.get("uf", "")
-        partes = [endereco, bairro, f"{municipio} - {uf}" if uf else municipio, "Brasil"]
-        consulta = ", ".join(p for p in partes if p)
+        return f"{municipio} - {uf}" if uf else municipio
+
+    def _buscar(self, consulta, referencia, raio_m):
         chave = normalizar_texto(consulta)
         if chave in self.cache:
             valor = self.cache[chave]
             return tuple(valor) if valor else None
-
         try:
             resultados = self._consultar(consulta)
         except (requests.RequestException, ValueError):
@@ -82,9 +81,35 @@ class Geocodificador:
                 lat, lon = float(r["lat"]), float(r["lon"])
             except (KeyError, TypeError, ValueError):
                 continue
-            if referencia and distancia_m(lat, lon, referencia[0], referencia[1]) > self.raio_max_m:
+            if referencia and distancia_m(lat, lon, referencia[0], referencia[1]) > raio_m:
                 continue
             ponto = (lat, lon)
             break
         self.cache[chave] = list(ponto) if ponto else None
         return ponto
+
+    def chave_endereco(self, endereco, bairro):
+        partes = [endereco, bairro, self._cidade(), "Brasil"]
+        return ", ".join(p for p in partes if p)
+
+    def localizar(self, endereco, bairro, referencia=None):
+        """Retorna (lat, lon) ou None.
+
+        ``referencia`` = (lat, lon) do centro do bairro; resultados longe demais
+        dele são descartados (evita cair em rua homônima de outra cidade). Sem
+        centro do bairro, o limite é o raio em volta do centro do município.
+        """
+        if not endereco:
+            return None
+        if referencia:
+            raio = self.raio_max_m
+        else:
+            referencia, raio = self._referencia_municipio(), self.raio_municipio_m
+        return self._buscar(self.chave_endereco(endereco, bairro), referencia, raio)
+
+    def localizar_bairro(self, bairro):
+        """Centro aproximado do bairro, dentro do município."""
+        if not bairro:
+            return None
+        consulta = ", ".join(p for p in [bairro, self._cidade(), "Brasil"] if p)
+        return self._buscar(consulta, self._referencia_municipio(), self.raio_municipio_m)

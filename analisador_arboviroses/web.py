@@ -35,7 +35,8 @@ PASTA_RESULTADOS = os.path.join(tempfile.gettempdir(), "analisador_arboviroses")
 VALIDADE_S = int(os.environ.get("RESULTADO_VALIDADE_MIN", "60")) * 60
 EXTENSOES = {".csv", ".txt", ".xlsx", ".xls", ".dbf"}
 ARQUIVOS = [
-    ("vigiavetor.json", "Pacote completo para o Vigiavetor"),
+    ("vigiavetor.xlsx", "Planilha Excel para o Vigiavetor (todas as abas)"),
+    ("vigiavetor.json", "Pacote completo em JSON"),
     ("alertas.json", "Alertas"), ("alertas.csv", "Alertas (planilha)"),
     ("bairros.json", "Indicadores por bairro"), ("bairros.csv", "Indicadores por bairro (planilha)"),
     ("microareas.csv", "Casos por microárea (planilha)"),

@@ -7,6 +7,7 @@ import os
 from datetime import date, datetime
 
 from .analise import AGRAVOS, analisar, associar_bairros, geocodificar
+from .excel import gravar_excel
 from .geocodificacao import Geocodificador
 from .leitura import ler_arquivo, ler_bairros, mapear_colunas, preparar_casos
 
@@ -26,6 +27,9 @@ CONFIG_PADRAO = {
     "geocodificacao_user_agent": "analisador-arboviroses/1.0",
     "geocodificacao_intervalo_segundos": 1.1,
     "geocodificacao_raio_max_km": 5,
+    "centro_municipio_latitude": None,
+    "centro_municipio_longitude": None,
+    "raio_municipio_km": 25,
     "geocodificacao_max_por_execucao": None,
     "arquivo_cache_geocodificacao": "cache/geocodificacao.json",
     "niveis_incidencia_acumulada": {"media": 100, "alta": 300},
@@ -187,4 +191,6 @@ def executar(conteudo, nome_arquivo, pasta_saida, config=None, agravo_padrao=Non
 
     pacote = {"versao_formato": 1, **resultado}
     _gravar_json(os.path.join(pasta_saida, "vigiavetor.json"), pacote)
+    gravar_excel(os.path.join(pasta_saida, "vigiavetor.xlsx"), resultado,
+                 [l for l in linhas if l.get("vv_confirmado")], campos)
     return pacote

@@ -6,6 +6,24 @@ Depois localiza os endereços no mapa, calcula os indicadores por **bairro e mic
 
 Esta pasta é independente do app de terrenos baldios e não altera nenhum arquivo dele.
 
+**Já configurado para Aracaju-SE** (código IBGE 2800308; o SINAN usa `280030`). O resultado principal é a
+planilha **`vigiavetor.xlsx`**, para alimentar o Vigiavetor.
+
+## O que ainda falta preencher: população dos bairros
+
+O `bairros.csv` já traz os bairros de Aracaju e as grafias comuns no SINAN (ex.: `18 DO FORTE`,
+`CONJ AUGUSTO FRANCO` → Farolândia, `MOSQUEIRO`/`ARUANA` → Zona de Expansão). A coluna **`populacao`
+está vazia**. Sem ela, tudo funciona, menos a incidência por 100 mil habitantes e os alertas de incidência.
+
+Onde encontrar a população por bairro:
+- **Anuário Estatístico de Aracaju**, no Portal da Transparência da Prefeitura (tem tabela por bairro);
+- **IBGE / Censo 2022**, agregados por bairro (SIDRA) ou pela Secretaria Municipal de Saúde/Vigilância.
+
+Basta abrir o `bairros.csv` (no Excel ou em qualquer editor) e preencher a coluna. As colunas
+`latitude`/`longitude` podem ficar vazias: o analisador busca o centro de cada bairro no OpenStreetMap
+na primeira execução e guarda em cache. Esses centros aparecem na aba *Bairros* da planilha gerada;
+copie-os para o `bairros.csv` se quiser fixá-los.
+
 ## Duas formas de usar
 
 ### 1. Pela página web (pelo celular)
@@ -43,7 +61,8 @@ Para testar com dados fictícios: `python analisar.py exemplos/sinan_exemplo_fic
 
 | Campo | Para que serve |
 |---|---|
-| `municipio`, `uf` | Usados para localizar os endereços. **Preencha com a sua cidade.** |
+| `municipio`, `uf` | Usados para localizar os endereços (Aracaju, SE). |
+| `centro_municipio_latitude/longitude`, `raio_municipio_km` | Centro de Aracaju e raio (25 km). Endereços localizados fora dele são descartados. |
 | `codigo_municipio_residencia` | Código IBGE (6 dígitos). Se preenchido, só conta residentes do município (`ID_MN_RESI`). |
 | `classificacao_confirmada` | Códigos de `CLASSI_FIN` que contam como confirmado. Padrão SINAN: dengue 10/11/12, chikungunya 13, zika 1. |
 | `incluir_em_investigacao` | `true` conta também os casos sem classificação final. |
@@ -67,7 +86,7 @@ Vila Nova;02;8500;-10.0100;-48.0050;VL NOVA|V NOVA
 - `apelidos` faz o nome escrito no SINAN casar com o bairro cadastrado (separe por `|`).
 - Os bairros que aparecem no SINAN e não estão no cadastro são listados em `resumo.json` → `bairros_nao_cadastrados`.
 
-**Substitua o `bairros.csv` de exemplo pelos bairros reais da sua cidade.**
+Os arquivos em `exemplos/` são **fictícios** (só para testes).
 
 ## Alertas gerados
 
@@ -86,6 +105,7 @@ Todos os limites podem ser ajustados no `config.json`.
 
 | Arquivo | Conteúdo |
 |---|---|
+| `vigiavetor.xlsx` | **Planilha para o Vigiavetor.** Abas: *Resumo*, *Alertas* (coloridas por nível), *Bairros*, *Microareas*, *Semanas* (uma coluna por doença), *Mapa_Casos* (latitude/longitude de cada caso) e *Casos_Confirmados* (todas as colunas). |
 | `vigiavetor.json` | **Pacote único** com `resumo`, `bairros`, `microareas`, `semanas`, `alertas`, `mapa_casos`, `mapa_bairros`. |
 | `resumo.json` | Semana epidemiológica de referência, totais por doença, óbitos, sexo, faixa etária e qualidade dos dados. |
 | `bairros.json` / `.csv` | Por bairro e doença: casos no ano, nas últimas 4 e 2 semanas, incidência, nível, tendência e óbitos. |

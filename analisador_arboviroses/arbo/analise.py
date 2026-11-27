@@ -3,7 +3,7 @@
 from collections import defaultdict
 from datetime import date, timedelta
 
-from .util import distancia_m, inicio_semana, semana_epidemiologica
+from .util import distancia_m, inicio_semana, normalizar_texto, semana_epidemiologica
 
 AGRAVOS = ("dengue", "chikungunya", "zika")
 NOME_AGRAVO = {"dengue": "Dengue", "chikungunya": "Chikungunya", "zika": "Zika"}
@@ -56,8 +56,31 @@ def associar_bairros(casos, cadastro):
 
 
 def geocodificar(casos, geocodificador, maximo=None):
-    """Define vv_latitude/vv_longitude e vv_precisao_localizacao para os confirmados."""
+    """Define vv_latitude/vv_longitude e vv_precisao_localizacao para os confirmados.
+
+    Bairros cadastrados sem coordenadas têm o centro buscado no mapa (uma vez, com cache).
+    """
     novas = 0
+
+    def cabe():
+        return maximo is None or novas < maximo
+
+    if geocodificador:
+        vistos = set()
+        for c in casos:
+            cad = c.get("_cadastro")
+            if not c["vv_confirmado"] or not cad or id(cad) in vistos:
+                continue
+            vistos.add(id(cad))
+            if cad.get("latitude") is None or cad.get("longitude") is None:
+                antes = geocodificador.consultas
+                if cabe() or _chave(geocodificador, cad["bairro"], None) in geocodificador.cache:
+                    ponto = geocodificador.localizar_bairro(cad["bairro"])
+                    novas += geocodificador.consultas - antes
+                    if ponto:
+                        cad["latitude"], cad["longitude"] = round(ponto[0], 6), round(ponto[1], 6)
+                        cad["coordenadas_origem"] = "openstreetmap"
+
     for c in casos:
         if not c["vv_confirmado"] or c["vv_precisao_localizacao"] == "arquivo":
             continue
@@ -65,10 +88,10 @@ def geocodificar(casos, geocodificador, maximo=None):
         ref = (cad["latitude"], cad["longitude"]) if cad.get("latitude") is not None and cad.get("longitude") is not None else None
         ponto = None
         if geocodificador and c["vv_endereco"]:
-            em_cache = geocodificador.consultas
-            if maximo is None or novas < maximo or _no_cache(geocodificador, c):
+            antes = geocodificador.consultas
+            if cabe() or _chave(geocodificador, c["vv_bairro"], c["vv_endereco"]) in geocodificador.cache:
                 ponto = geocodificador.localizar(c["vv_endereco"], c["vv_bairro"], ref)
-                novas += geocodificador.consultas - em_cache
+                novas += geocodificador.consultas - antes
         if ponto:
             c["vv_latitude"], c["vv_longitude"] = round(ponto[0], 6), round(ponto[1], 6)
             c["vv_precisao_localizacao"] = "endereco"
@@ -80,13 +103,15 @@ def geocodificar(casos, geocodificador, maximo=None):
     return novas
 
 
-def _no_cache(geocodificador, caso):
-    from .util import normalizar_texto
-
-    cfg = geocodificador.config
-    municipio, uf = cfg.get("municipio", ""), cfg.get("uf", "")
-    partes = [caso["vv_endereco"], caso["vv_bairro"], f"{municipio} - {uf}" if uf else municipio, "Brasil"]
-    return normalizar_texto(", ".join(p for p in partes if p)) in geocodificador.cache
+def _chave(geocodificador, bairro, endereco):
+    """Chave de cache usada pelo geocodificador (para saber se a consulta é gratuita)."""
+    if not hasattr(geocodificador, "chave_endereco"):
+        return None
+    if endereco is None:
+        consulta = ", ".join(p for p in [bairro, geocodificador._cidade(), "Brasil"] if p)
+    else:
+        consulta = geocodificador.chave_endereco(endereco, bairro)
+    return normalizar_texto(consulta)
 
 
 def analisar(casos, cadastro, config, data_ref=None):
